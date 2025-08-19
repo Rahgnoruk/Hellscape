@@ -9,8 +9,10 @@ using Unity.Netcode.Transports.UTP;
 using Unity.Networking.Transport.Relay;
 using Unity.Services.Core.Environments; // RelayServerData
 
-namespace Hellscape.Net {
-    public sealed class RelayBootstrap : MonoBehaviour {
+namespace Hellscape.Net
+{
+    public sealed class RelayBootstrap : MonoBehaviour
+    {
 
         [SerializeField] string environment = "production"; // or "staging", per UGS project
         [SerializeField] int maxConnections = 3; // host + N clients
@@ -21,30 +23,38 @@ namespace Hellscape.Net {
         bool servicesReady;
 
 
-        async void Awake() {
+        async void Awake()
+        {
             await EnsureServicesAsync();
         }
 
 
-        async Task EnsureServicesAsync() {
+        async Task EnsureServicesAsync()
+        {
             if (servicesReady) return;
-            try {
+            try
+            {
                 var opts = new InitializationOptions().SetEnvironmentName(environment);
                 await UnityServices.InitializeAsync(opts);
-            if (!AuthenticationService.Instance.IsSignedIn) {
-                await AuthenticationService.Instance.SignInAnonymouslyAsync();
-            }
+                if (!AuthenticationService.Instance.IsSignedIn)
+                {
+                    await AuthenticationService.Instance.SignInAnonymouslyAsync();
+                }
                 servicesReady = true;
                 Debug.Log($"UGS initialized. PlayerId={AuthenticationService.Instance.PlayerId}");
-            } catch (System.Exception ex) {
+            }
+            catch (System.Exception ex)
+            {
                 Debug.LogException(ex);
             }
         }
 
 
-       public async Task StartHostAsync() {
+        public async Task StartHostAsync()
+        {
             await EnsureServicesAsync();
-            try {
+            try
+            {
                 // 1) Create relay allocation (auto region)
                 Allocation allocation = await RelayService.Instance.CreateAllocationAsync(maxConnections);
                 // 2) Get join code
@@ -62,21 +72,28 @@ namespace Hellscape.Net {
                 transport.SetRelayServerData(rsd);
 #endif
                 // 4) Start host
-                if (!NetworkManager.Singleton.StartHost()) {
+                if (!NetworkManager.Singleton.StartHost())
+                {
                     Debug.LogError("StartHost failed");
                     lastJoinCode = string.Empty;
-                } else {
+                }
+                else
+                {
                     Debug.Log($"Relay Host started. Join Code: {lastJoinCode}");
                 }
-            } catch (System.Exception ex) {
+            }
+            catch (System.Exception ex)
+            {
                 Debug.LogException(ex);
                 lastJoinCode = string.Empty;
             }
         }
 
-        public async Task StartClientAsync(string code) {
+        public async Task StartClientAsync(string code)
+        {
             await EnsureServicesAsync();
-            try {
+            try
+            {
                 // 1) Join allocation using code
                 JoinAllocation join = await RelayService.Instance.JoinAllocationAsync(code);
                 // 2) Configure transport
@@ -92,22 +109,30 @@ namespace Hellscape.Net {
                 transport.SetRelayServerData(rsd);
 #endif
                 // 3) Start client
-                if (!NetworkManager.Singleton.StartClient()) {
+                if (!NetworkManager.Singleton.StartClient())
+                {
                     Debug.LogError("StartClient failed");
-                } else {
+                }
+                else
+                {
                     Debug.Log("Client started via Relay");
                 }
-            } catch (System.Exception ex) {
+            }
+            catch (System.Exception ex)
+            {
                 Debug.LogException(ex);
             }
         }
 
         // Minimal debug UI (replace with proper UI later)
-        void OnGUI() {
+        void OnGUI()
+        {
             const int pad = 10; int y = pad; int w = 320; int h = 30;
             if (!Application.isPlaying) { return; }
-            if (NetworkManager.Singleton && !NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient) {
-                if (GUI.Button(new Rect(pad, y, w, h), "Host via Relay")){
+            if (NetworkManager.Singleton && !NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient)
+            {
+                if (GUI.Button(new Rect(pad, y, w, h), "Host via Relay"))
+                {
                     _ = StartHostAsync();
                 }
                 y += h + pad;
@@ -115,8 +140,10 @@ namespace Hellscape.Net {
                 GUILayout.Label("Join Code:");
                 joinCodeInput = GUILayout.TextField(joinCodeInput, 16).ToUpperInvariant();
                 if (GUILayout.Button("Join via Relay")) _ = StartClientAsync(joinCodeInput.Trim());
-                    GUILayout.EndArea();
-            } else {
+                GUILayout.EndArea();
+            }
+            else
+            {
                 string status = NetworkManager.Singleton.IsServer ? "HOST" : (NetworkManager.Singleton.IsClient ? "CLIENT" : "IDLE");
                 GUI.Label(new Rect(pad, y, 500, h), $"Status: {status} Code: {lastJoinCode}");
             }
