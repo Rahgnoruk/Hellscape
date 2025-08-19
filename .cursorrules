@@ -1,0 +1,74 @@
+# --- Hellscape repository rules for Cursor ---
+# Purpose: keep a hexagonal, test-driven architecture for an authoritative sim with NGO + Relay.
+
+
+## High-level Context
+PROJECT_NAME: Hellscape (Unity 6 / 2D URP / top-down co-op)
+CORE_LOOP: Run → Scavenge → Fight → Decide (press deeper or survive night)
+NETWORKING: Host-authoritative simulation; NGO + Unity Transport + Relay (DTLS native, WSS WebGL)
+ARCHITECTURE: Hexagonal (Ports/Adapters). Domain (no UnityEngine) at center. Presentation and platform outside.
+TESTING: TDD-first. Unit + integration tests in Edit Mode (NUnit). Golden-master for snapshots.
+
+
+## Module Boundaries (assemblies)
+- Hellscape.Domain (pure C#, NO UnityEngine references)
+- Hellscape.Net (adapters: transports, NGO/Relay bridge)
+- Hellscape.Persistence (adapters: save/load, config sources)
+- Hellscape.Platform (adapters: clock, RNG, pathfinding)
+- Hellscape.App (composition root in Unity, bootstraps)
+- Hellscape.Presentation (MonoBehaviours, VFX/SFX/UI only, no game rules)
+- Hellscape.Tests (NUnit tests for Domain and adapters)
+
+
+## Ports (interfaces in Domain)
+- IClock { float FixedDelta {get;} }
+- IRng { int Range(int,int); float Next01(); }
+- ITransport { SendToServer/Client(byte[]); events OnServerMsg/OnClientMsg }
+- IStorage, IConfig (DTOs for balance)
+
+
+## Determinism & Tick
+- Domain logic runs on fixed tick via IClock.FixedDelta. No Time.deltaTime in Domain.
+- Centralized IRng seeded per run; DO NOT use UnityEngine.Random inside Domain.
+
+
+## Networking
+- ServerSim is authoritative. Clients send InputCommand {tick, move, aim, buttons}.
+- Snapshots are binary, delta-encoded where possible. Owner-only input.
+- Join-in-progress uses world snapshot (seed, ring/night, nearby actors).
+
+
+## Presentation rules
+- MonoBehaviours subscribe to domain events; never contain rules.
+- Input System (PlayerInput) feeds local owner only. Camera/VFX/SFX in Presentation.
+
+
+## TDD Contracts (must keep green)
+- NightSystem advances days/nights; CorruptionRadius grows monotonic.
+- Spawn weights by ring/night follow tables; heatmap editor tests render.
+- TTK bands: Armored (2–3s normal, 0.6–1.0s AP) with mid-tier DPS baseline.
+- Snapshot codec roundtrip is equal (golden master hash).
+- Deterministic replay: same seed + command stream → same snapshot.
+
+
+## Coding Conventions
+- C# 10+, file-scoped namespaces, PascalCase types, camelCase fields, _private if needed.
+- Avoid allocations in per-tick hot paths; use struct where appropriate; pool lists.
+- Assembly definitions for each module. Domain must not reference Unity assemblies.
+
+
+## Definition of Done (feature)
+- Tests first (unit/integration) pass locally.
+- Domain unchanged references (no UnityEngine in Domain).
+- New DTOs serialized and covered by roundtrip test.
+- Editor compiles with 0 warnings. PlayMode smoke test OK.
+
+
+## Commit messages
+- Conventional Commits: feat:, fix:, test:, refactor:, perf:, build:, docs:, chore:
+
+
+## Anti-goals
+- No physics-authoritative movement in Domain (use kinematic math).
+- No gameplay logic inside NetworkBehaviours / MonoBehaviours.
+- No reliance on Update order; visuals may lag one frame from Domain.
