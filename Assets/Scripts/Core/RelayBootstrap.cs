@@ -6,7 +6,8 @@ using Unity.Services.Relay;
 using Unity.Services.Relay.Models;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
-using Unity.Networking.Transport.Relay; // RelayServerData
+using Unity.Networking.Transport.Relay;
+using Unity.Services.Core.Environments; // RelayServerData
 
 namespace Hellscape.Net {
     public sealed class RelayBootstrap : MonoBehaviour {
@@ -51,14 +52,14 @@ namespace Hellscape.Net {
                 // 3) Configure transport
                 var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
 #if UNITY_WEBGL
-                var rsd = new RelayServerData(allocation, "wss"); // WebGL → secure WebSockets
+                var rsd = allocation.ToRelayServerData("wss"); // WebGL → secure WebSockets
 #else
-                var rsd = new RelayServerData(allocation, "dtls"); // Native → UDP/DTLS
+                var rsd = allocation.ToRelayServerData("dtls"); // Native → UDP/DTLS
 #endif
 #if UNITY_TRANSPORT_2_0_0_OR_NEWER
                 transport.SetRelayServerData(rsd);
 #else
-                transport.SetRelayServerData(ref rsd);
+                transport.SetRelayServerData(rsd);
 #endif
                 // 4) Start host
                 if (!NetworkManager.Singleton.StartHost()) {
@@ -81,14 +82,14 @@ namespace Hellscape.Net {
                 // 2) Configure transport
                 var transport = NetworkManager.Singleton.GetComponent<UnityTransport>();
 #if UNITY_WEBGL
-                var rsd = new RelayServerData(join, "wss");
+                var rsd = join.ToRelayServerData("wss");
 #else
-                var rsd = new RelayServerData(join, "dtls");
+                var rsd = join.ToRelayServerData("dtls");
 #endif
 #if UNITY_TRANSPORT_2_0_0_OR_NEWER
                 transport.SetRelayServerData(rsd);
 #else
-                transport.SetRelayServerData(ref rsd);
+                transport.SetRelayServerData(rsd);
 #endif
                 // 3) Start client
                 if (!NetworkManager.Singleton.StartClient()) {
