@@ -1,5 +1,4 @@
-using UnityEngine;
-namespace Hellscape.Core {
+namespace Hellscape.Net {
     public class LocalTransport : ITransport
     {
         public System.Action<byte[]> OnServerMsg { get; set; }
