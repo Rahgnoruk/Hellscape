@@ -1,3 +1,6 @@
 {
-	"name": "Hellscape.Platform"
+	"name": "Hellscape.Platform",
+	"references": [
+		"Hellscape.Domain"
+	]
 }
