@@ -73,6 +73,10 @@ TESTING: TDD-first. Unit + integration tests in Edit Mode (NUnit). Golden-master
 - No gameplay logic inside NetworkBehaviours / MonoBehaviours.
 - No reliance on Update order; visuals may lag one frame from Domain.
 
+## Test Runner
+DO_NOT_USE_DOTNET_TEST: true
+TEST_RUNNER_WINDOWS: powershell -ExecutionPolicy Bypass -File docs\tools\unity-test.ps1
+
 ## Product Brief (stable)
 CAMERA: 2D top-down, orthographic (URP 2D lights). No depth gameplay.
 PLAYER LOOK: Single sprite; “animation” = flash/scale on hit, micro-hop on move, particles on attack. No skeletal rigs.
