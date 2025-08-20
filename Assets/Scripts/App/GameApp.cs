@@ -10,7 +10,6 @@ namespace Hellscape.Core {
         [SerializeField] private int seed = 0;
 
 
-        private ServerSim server;
 
 
         void Awake() {
@@ -19,8 +18,6 @@ namespace Hellscape.Core {
 
 
             if (mode == GameMode.SinglePlayer) {
-                server = new ServerSim(seed == 0 ? System.Environment.TickCount : seed);
-                server.Start();
             }
         }
 
@@ -31,8 +28,6 @@ namespace Hellscape.Core {
 
 
         void FixedUpdate() {
-            // Drive the sim at fixed rate
-            server?.Tick();
         }
     }
 }
