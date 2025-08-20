@@ -73,6 +73,25 @@ namespace Hellscape.Tests {
             var dashDistance = afterDashPos.x - initialPos.x;
             Assert.That(dashDistance, Is.GreaterThan(0.1f), "Dash should provide significant movement");
         }
+        
+        [Test]
+        public void Movement_AttackButton_DoesNotAffectMovement()
+        {
+            // Arrange
+            var initialSnapshot = sim.CreateSnapshot();
+            var initialPos = initialSnapshot.actors[0];
+
+            // Act - Apply attack command (should not affect movement)
+            var attackCommand = new InputCommand(sim.GetCurrentTick(), 0, 0, 0, 0, MovementConstants.AttackButtonBit);
+            sim.Apply(attackCommand);
+            sim.Tick(FixedDelta);
+
+            // Assert - Position should remain the same
+            var afterAttackSnapshot = sim.CreateSnapshot();
+            var afterAttackPos = afterAttackSnapshot.actors[0];
+            Assert.That(afterAttackPos.x, Is.EqualTo(initialPos.x).Within(0.001f), "Attack button should not affect movement");
+            Assert.That(afterAttackPos.y, Is.EqualTo(initialPos.y).Within(0.001f), "Attack button should not affect movement");
+        }
 
         [Test]
         public void Movement_Dash_Cooldown()

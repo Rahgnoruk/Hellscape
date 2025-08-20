@@ -37,6 +37,7 @@ namespace Hellscape.Tests {
             Assert.That(MovementConstants.PlayerAcceleration, Is.GreaterThan(0));
             Assert.That(MovementConstants.DashImpulse, Is.GreaterThan(0));
             Assert.That(MovementConstants.DashButtonBit, Is.EqualTo(0x04));
+            Assert.That(MovementConstants.AttackButtonBit, Is.EqualTo(0x01));
         }
         
         [Test]
