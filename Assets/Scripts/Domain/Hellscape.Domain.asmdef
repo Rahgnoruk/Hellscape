@@ -1,3 +1,5 @@
 {
-	"name": "Hellscape.Domain"
+	"name": "Hellscape.Domain",
+	"overrideReferences": true,
+	"references": []
 }
