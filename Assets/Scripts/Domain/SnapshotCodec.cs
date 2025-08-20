@@ -1,4 +1,3 @@
-using System;
 using System.IO;
 
 namespace Hellscape.Domain {
@@ -47,3 +46,4 @@ namespace Hellscape.Domain {
         }
     }
 }
+
