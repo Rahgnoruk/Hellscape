@@ -1,10 +1,9 @@
 using UnityEngine;
 using Hellscape.Domain;
 using Hellscape.Platform;
-using Hellscape.Net;
-
+using Vector2 = Hellscape.Domain.Vector2;
 namespace Hellscape.App {
-    public enum GameMode { SinglePlayer /*, HostMP, ClientMP*/ }
+    public enum GameMode { SinglePlayer , HostMP, ClientMP }
 
     public sealed class GameApp : MonoBehaviour {
         [SerializeField] private GameMode mode = GameMode.SinglePlayer;
@@ -12,7 +11,6 @@ namespace Hellscape.App {
         
         private ServerSim serverSim;
         private UnityClock clock;
-        private LocalTransport transport;
         private InputAdapter inputAdapter;
 
         void Awake() {
@@ -23,25 +21,19 @@ namespace Hellscape.App {
                 // Initialize domain simulation
                 serverSim = new ServerSim(seed);
                 serverSim.Start();
-                
+                int playerId = serverSim.SpawnPlayerAt(new Vector2(0, 0)); // Spawn player at origin
+
                 // Initialize platform adapters
                 clock = new UnityClock();
-                transport = new LocalTransport();
                 
                 // Create input adapter
                 inputAdapter = gameObject.AddComponent<InputAdapter>();
-                inputAdapter.Initialize(transport, serverSim);
+                inputAdapter.Initialize(serverSim, playerId);
             }
-        }
-
-        void Update() {
-            // Visual-only updates live here (camera, UI)
         }
 
         void FixedUpdate() {
-            if (serverSim != null) {
-                serverSim.Tick(clock.FixedDelta);
-            }
+            serverSim?.Tick(clock.FixedDelta);
         }
     }
 }

@@ -13,8 +13,11 @@ namespace Hellscape.Domain {
 
         // Actors (toy implementation)
         private readonly Dictionary<int, Actor> actors = new();
+        public bool RemoveActor(int actorId) => actors.Remove(actorId);
+
         private int nextId = 1;
-        private Actor playerActor;
+
+        private readonly Dictionary<int, InputCommand> _latestByActor = new();
 
         public ServerSim(int seed) {
             this.rng = new DeterministicRng(seed);
@@ -24,15 +27,27 @@ namespace Hellscape.Domain {
             grid = new CityGrid(64, 64, 32); // width, height, centerRadius
             night = new NightSystem();
             director = new Director();
-            SpawnPlayer(new Vector2(grid.CenterX - 10, grid.CenterY + 6));
-            // Spawn a few enemies to prove life
-            for (int i = 0; i < 8; i++) {
-                SpawnEnemy(RandomEdgePos());
-            }
         }
 
         public void Tick(float deltaTime) {
             tick++;
+
+            foreach (var pair in _latestByActor)
+            {
+                if (actors.TryGetValue(pair.Key, out var a))
+                {
+                    a.ApplyInput(
+                      pair.Value,
+                      MovementConstants.PlayerSpeed,
+                      MovementConstants.PlayerAcceleration,
+                      MovementConstants.PlayerDeceleration,
+                      MovementConstants.DashImpulse,
+                      MovementConstants.DashCooldown,
+                      deltaTime
+                    );
+                }
+            }
+
             night.Tick(deltaTime);
             director.Tick();
 
@@ -43,11 +58,9 @@ namespace Hellscape.Domain {
             // For single-player we can skip serialization for now
         }
 
-        public void Apply(InputCommand command) {
-            if (playerActor != null && command.tick == tick) {
-                playerActor.ApplyInput(command, MovementConstants.PlayerSpeed, MovementConstants.PlayerAcceleration, 
-                    MovementConstants.PlayerDeceleration, MovementConstants.DashImpulse, MovementConstants.DashCooldown);
-            }
+        public void ApplyForActor(int actorId, InputCommand cmd)
+        {
+            _latestByActor[actorId] = cmd;
         }
 
         public WorldSnapshot CreateSnapshot() {
@@ -62,22 +75,22 @@ namespace Hellscape.Domain {
         
         public int GetCurrentTick() => tick;
 
-        private void SpawnPlayer(Vector2 pos) {
+        public int SpawnPlayerAt(Vector2 pos)
+        {
             var id = nextId++;
-            playerActor = new Actor(id, pos, ActorType.Player);
-            actors[id] = playerActor;
+            actors[id] = new Actor(id, pos, ActorType.Player);
+            return id;
         }
 
-        private void SpawnEnemy(Vector2 pos) {
-            var id = nextId++;
-            actors[id] = new Actor(id, pos, ActorType.Enemy);
-        }
-
-        private Vector2 RandomEdgePos() {
-            // Spawn on outskirts
-            var x = rng.Range(2, grid.Width - 2);
-            var y = rng.Range(2, grid.Height - 2);
-            return new Vector2(x, y);
+        public bool TryGetActorState(int id, out ActorState state)
+        {
+            if (actors.TryGetValue(id, out var a))
+            {
+                state = a.ToActorState();
+                return true;
+            }
+            state = default;
+            return false;
         }
 
         // Minimal inner Actor for the server
@@ -108,7 +121,7 @@ namespace Hellscape.Domain {
             }
             
             public void ApplyInput(InputCommand command, float speed, float acceleration, float deceleration, 
-                float dashImpulse, float dashCooldown) {
+                float dashImpulse, float dashCooldown, float deltaTime) {
                 
                 // Handle dash
                 if ((command.buttons & MovementConstants.DashButtonBit) != 0 && dashCooldownRemaining <= 0) {
@@ -125,12 +138,15 @@ namespace Hellscape.Domain {
                 var targetVel = new Vector2(command.moveX, command.moveY);
                 if (targetVel.x != 0 || targetVel.y != 0) {
                     targetVel = Normalize(targetVel) * speed;
-                    vel = Lerp(vel, targetVel, acceleration * 0.02f); // Using fixed delta
-                } else {
-                    vel = Lerp(vel, Vector2.zero, deceleration * 0.02f);
+                    float t = Clamp01(acceleration * deltaTime);
+                    vel = Lerp(vel, targetVel, t);
+                } else
+                {
+                    float t = Clamp01(deceleration * deltaTime);
+                    vel = Lerp(vel, Vector2.zero, t);
                 }
             }
-            
+
             public ActorState ToActorState() {
                 return new ActorState(id, pos.x, pos.y, vel.x, vel.y, hp, (byte)type);
             }
@@ -145,6 +161,12 @@ namespace Hellscape.Domain {
             
             private static Vector2 Lerp(Vector2 a, Vector2 b, float t) {
                 return new Vector2(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
+            }
+            private static float Clamp01(float x)
+            {
+                if (x < 0f) return 0f;
+                if (x > 1f) return 1f;
+                return x;
             }
         }
     }

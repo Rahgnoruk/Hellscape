@@ -18,10 +18,11 @@ namespace Hellscape.Tests {
             var initialSnapshot = sim.CreateSnapshot();
             var initialPos = initialSnapshot.actors[0]; // Player is first
             
+            int actorId = sim.SpawnPlayerAt(new Vector2(0, 0));
             // Act - Apply zero input for multiple ticks
             for (int i = 0; i < 10; i++) {
                 var zeroCommand = new InputCommand(sim.GetCurrentTick(), 0, 0, 0, 0, 0);
-                sim.Apply(zeroCommand);
+                sim.ApplyForActor(actorId, zeroCommand);
                 sim.Tick(FixedDelta);
             }
             
@@ -38,11 +39,12 @@ namespace Hellscape.Tests {
             // Arrange
             var initialSnapshot = sim.CreateSnapshot();
             var initialPos = initialSnapshot.actors[0];
-            
+            int actorId = sim.SpawnPlayerAt(new Vector2(0, 0));
+
             // Act - Apply forward movement for multiple ticks
             for (int i = 0; i < 10; i++) {
                 var forwardCommand = new InputCommand(sim.GetCurrentTick(), 1, 0, 0, 0, 0);
-                sim.Apply(forwardCommand);
+                sim.ApplyForActor(actorId, forwardCommand);
                 sim.Tick(FixedDelta);
             }
             
@@ -61,10 +63,11 @@ namespace Hellscape.Tests {
             // Arrange
             var initialSnapshot = sim.CreateSnapshot();
             var initialPos = initialSnapshot.actors[0];
+            int actorId = sim.SpawnPlayerAt(new Vector2(0, 0));
 
             // Act - Apply dash command
             var dashCommand = new InputCommand(sim.GetCurrentTick(), 1, 0, 0, 0, MovementConstants.DashButtonBit);
-            sim.Apply(dashCommand);
+            sim.ApplyForActor(actorId, dashCommand);
             sim.Tick(FixedDelta);
 
             // Assert - Should have moved significantly
@@ -80,10 +83,11 @@ namespace Hellscape.Tests {
             // Arrange
             var initialSnapshot = sim.CreateSnapshot();
             var initialPos = initialSnapshot.actors[0];
+            int actorId = sim.SpawnPlayerAt(new Vector2(0, 0));
 
             // Act - Apply attack command (should not affect movement)
             var attackCommand = new InputCommand(sim.GetCurrentTick(), 0, 0, 0, 0, MovementConstants.AttackButtonBit);
-            sim.Apply(attackCommand);
+            sim.ApplyForActor(actorId, attackCommand);
             sim.Tick(FixedDelta);
 
             // Assert - Position should remain the same
@@ -99,15 +103,16 @@ namespace Hellscape.Tests {
             // Arrange
             var initialSnapshot = sim.CreateSnapshot();
             var initialPos = initialSnapshot.actors[0];
+            int actorId = sim.SpawnPlayerAt(new Vector2(0, 0));
 
             // Act - Apply dash command
             var dashCommand = new InputCommand(sim.GetCurrentTick(), 1, 0, 0, 0, MovementConstants.DashButtonBit);
-            sim.Apply(dashCommand);
+            sim.ApplyForActor(actorId, dashCommand);
             sim.Tick(FixedDelta);
 
             // Act - Try to dash again immediately (should be ignored due to cooldown)
             var secondDashCommand = new InputCommand(sim.GetCurrentTick(), 1, 0, 0, 0, MovementConstants.DashButtonBit);
-            sim.Apply(secondDashCommand);
+            sim.ApplyForActor(actorId, secondDashCommand);
             sim.Tick(FixedDelta);
 
             // Assert - Should not have moved much more
@@ -153,12 +158,14 @@ namespace Hellscape.Tests {
             var sim2 = new ServerSim(42);
             sim1.Start();
             sim2.Start();
-            
+            int actorId1 = sim1.SpawnPlayerAt(new Vector2(0, 0));
+            int actorId2 = sim2.SpawnPlayerAt(new Vector2(0, 0));
+
             // Act - Apply same sequence of commands to both sims
             for (int i = 0; i < 20; i++) {
                 var command = new InputCommand(i + 1, 1, 0, 0, 0, i % 10 == 0 ? MovementConstants.DashButtonBit : (byte)0);
-                sim1.Apply(command);
-                sim2.Apply(command);
+                sim1.ApplyForActor(actorId1, command);
+                sim2.ApplyForActor(actorId2, command);
                 sim1.Tick(FixedDelta);
                 sim2.Tick(FixedDelta);
             }
