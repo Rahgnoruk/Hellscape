@@ -14,6 +14,7 @@ namespace Hellscape.Domain {
         // Actors (toy implementation)
         private readonly Dictionary<int, Actor> actors = new();
         private int nextId = 1;
+        private Actor playerActor;
 
         public ServerSim(int seed) {
             this.rng = new DeterministicRng(seed);
@@ -42,9 +43,29 @@ namespace Hellscape.Domain {
             // For single-player we can skip serialization for now
         }
 
+        public void Apply(InputCommand command) {
+            if (playerActor != null && command.tick == tick) {
+                playerActor.ApplyInput(command, MovementConstants.PlayerSpeed, MovementConstants.PlayerAcceleration, 
+                    MovementConstants.PlayerDeceleration, MovementConstants.DashImpulse, MovementConstants.DashCooldown);
+            }
+        }
+
+        public WorldSnapshot CreateSnapshot() {
+            var actorStates = new ActorState[actors.Count];
+            int i = 0;
+            foreach (var actor in actors.Values) {
+                actorStates[i] = actor.ToActorState();
+                i++;
+            }
+            return new WorldSnapshot(tick, actorStates);
+        }
+        
+        public int GetCurrentTick() => tick;
+
         private void SpawnPlayer(Vector2 pos) {
             var id = nextId++;
-            actors[id] = new Actor(id, pos, ActorType.Player);
+            playerActor = new Actor(id, pos, ActorType.Player);
+            actors[id] = playerActor;
         }
 
         private void SpawnEnemy(Vector2 pos) {
@@ -68,6 +89,9 @@ namespace Hellscape.Domain {
             public short hp = 100;
             public ActorType type;
             
+            // Dash state
+            private float dashCooldownRemaining;
+            
             public Actor(int id, Vector2 pos, ActorType type) {
                 this.id = id;
                 this.pos = pos;
@@ -76,6 +100,51 @@ namespace Hellscape.Domain {
             
             public void Tick(float deltaTime) {
                 pos += vel * deltaTime; /* TODO: AI/physics */
+                
+                // Update dash cooldown
+                if (dashCooldownRemaining > 0) {
+                    dashCooldownRemaining -= deltaTime;
+                }
+            }
+            
+            public void ApplyInput(InputCommand command, float speed, float acceleration, float deceleration, 
+                float dashImpulse, float dashCooldown) {
+                
+                // Handle dash
+                if ((command.buttons & MovementConstants.DashButtonBit) != 0 && dashCooldownRemaining <= 0) {
+                    var dashDir = new Vector2(command.moveX, command.moveY);
+                    if (dashDir.x != 0 || dashDir.y != 0) {
+                        var normalized = Normalize(dashDir);
+                        vel = normalized * dashImpulse;
+                        dashCooldownRemaining = dashCooldown;
+                        return;
+                    }
+                }
+                
+                // Normal movement
+                var targetVel = new Vector2(command.moveX, command.moveY);
+                if (targetVel.x != 0 || targetVel.y != 0) {
+                    targetVel = Normalize(targetVel) * speed;
+                    vel = Lerp(vel, targetVel, acceleration * 0.02f); // Using fixed delta
+                } else {
+                    vel = Lerp(vel, Vector2.zero, deceleration * 0.02f);
+                }
+            }
+            
+            public ActorState ToActorState() {
+                return new ActorState(id, pos.x, pos.y, vel.x, vel.y, hp, (byte)type);
+            }
+            
+            private static Vector2 Normalize(Vector2 v) {
+                var length = (float)System.Math.Sqrt(v.x * v.x + v.y * v.y);
+                if (length > 0) {
+                    return new Vector2(v.x / length, v.y / length);
+                }
+                return Vector2.zero;
+            }
+            
+            private static Vector2 Lerp(Vector2 a, Vector2 b, float t) {
+                return new Vector2(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t);
             }
         }
     }
@@ -85,6 +154,9 @@ namespace Hellscape.Domain {
         public float x, y;
         public Vector2(float x, float y) { this.x = x; this.y = y; }
         public static Vector2 operator +(Vector2 a, Vector2 b) => new Vector2(a.x + b.x, a.y + b.y);
+        public static Vector2 operator -(Vector2 a, Vector2 b) => new Vector2(a.x - b.x, a.y - b.y);
         public static Vector2 operator *(Vector2 a, float b) => new Vector2(a.x * b, a.y * b);
+        public static Vector2 operator *(float a, Vector2 b) => new Vector2(a * b.x, a * b.y);
+        public static Vector2 zero => new Vector2(0, 0);
     }
 }
