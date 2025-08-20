@@ -1,5 +1,4 @@
-using UnityEngine;
-namespace Hellscape.Core {
+namespace Hellscape.Net {
     public interface ITransport
     {
         void SendToServer(byte[] msg);
