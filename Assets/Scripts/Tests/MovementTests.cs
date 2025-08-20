@@ -29,8 +29,8 @@ namespace Hellscape.Tests {
             var finalSnapshot = sim.CreateSnapshot();
             var finalPos = finalSnapshot.actors[0];
             
-            Assert.That(finalPos.x, Is.EqualTo(initialPos.x).Within(0.001f), "X position should not drift");
-            Assert.That(finalPos.y, Is.EqualTo(initialPos.y).Within(0.001f), "Y position should not drift");
+            Assert.That(finalPos.positionX, Is.EqualTo(initialPos.positionX).Within(0.001f), "X position should not drift");
+            Assert.That(finalPos.positionY, Is.EqualTo(initialPos.positionY).Within(0.001f), "Y position should not drift");
         }
         
         [Test]
@@ -51,8 +51,8 @@ namespace Hellscape.Tests {
             var finalPos = finalSnapshot.actors[0];
             
             // Should have moved in X direction (allowing for acceleration)
-            Assert.That(finalPos.x, Is.GreaterThan(initialPos.x), "Should move forward in X direction");
-            Assert.That(finalPos.y, Is.EqualTo(initialPos.y).Within(0.001f), "Should not move in Y direction");
+            Assert.That(finalPos.positionX, Is.GreaterThan(initialPos.positionX), "Should move forward in X direction");
+            Assert.That(finalPos.positionY, Is.EqualTo(initialPos.positionY).Within(0.001f), "Should not move in Y direction");
         }
 
         [Test]
@@ -70,7 +70,7 @@ namespace Hellscape.Tests {
             // Assert - Should have moved significantly
             var afterDashSnapshot = sim.CreateSnapshot();
             var afterDashPos = afterDashSnapshot.actors[0];
-            var dashDistance = afterDashPos.x - initialPos.x;
+            var dashDistance = afterDashPos.positionX - initialPos.positionX;
             Assert.That(dashDistance, Is.GreaterThan(0.1f), "Dash should provide significant movement");
         }
         
@@ -89,8 +89,8 @@ namespace Hellscape.Tests {
             // Assert - Position should remain the same
             var afterAttackSnapshot = sim.CreateSnapshot();
             var afterAttackPos = afterAttackSnapshot.actors[0];
-            Assert.That(afterAttackPos.x, Is.EqualTo(initialPos.x).Within(0.001f), "Attack button should not affect movement");
-            Assert.That(afterAttackPos.y, Is.EqualTo(initialPos.y).Within(0.001f), "Attack button should not affect movement");
+            Assert.That(afterAttackPos.positionX, Is.EqualTo(initialPos.positionX).Within(0.001f), "Attack button should not affect movement");
+            Assert.That(afterAttackPos.positionY, Is.EqualTo(initialPos.positionY).Within(0.001f), "Attack button should not affect movement");
         }
 
         [Test]
@@ -115,7 +115,7 @@ namespace Hellscape.Tests {
             var afterDashPos = afterDashSnapshot.actors[0];
             var afterSecondDashSnapshot = sim.CreateSnapshot();
             var afterSecondDashPos = afterSecondDashSnapshot.actors[0];
-            var secondDashDistance = afterSecondDashPos.x - afterDashPos.x;
+            var secondDashDistance = afterSecondDashPos.positionX - afterDashPos.positionX;
             Assert.That(secondDashDistance, Is.LessThan(0.1f), "Second dash should be ignored due to cooldown");
         }
         
@@ -137,10 +137,10 @@ namespace Hellscape.Tests {
                 var decoded_actor = decoded.actors[i];
                 
                 Assert.That(decoded_actor.id, Is.EqualTo(original.id), $"Actor {i} ID should match");
-                Assert.That(decoded_actor.x, Is.EqualTo(original.x).Within(0.001f), $"Actor {i} X should match");
-                Assert.That(decoded_actor.y, Is.EqualTo(original.y).Within(0.001f), $"Actor {i} Y should match");
-                Assert.That(decoded_actor.vx, Is.EqualTo(original.vx).Within(0.001f), $"Actor {i} VX should match");
-                Assert.That(decoded_actor.vy, Is.EqualTo(original.vy).Within(0.001f), $"Actor {i} VY should match");
+                Assert.That(decoded_actor.positionX, Is.EqualTo(original.positionX).Within(0.001f), $"Actor {i} X should match");
+                Assert.That(decoded_actor.positionY, Is.EqualTo(original.positionY).Within(0.001f), $"Actor {i} Y should match");
+                Assert.That(decoded_actor.velocityX, Is.EqualTo(original.velocityX).Within(0.001f), $"Actor {i} VX should match");
+                Assert.That(decoded_actor.velocityY, Is.EqualTo(original.velocityY).Within(0.001f), $"Actor {i} VY should match");
                 Assert.That(decoded_actor.hp, Is.EqualTo(original.hp), $"Actor {i} HP should match");
                 Assert.That(decoded_actor.type, Is.EqualTo(original.type), $"Actor {i} type should match");
             }

@@ -23,9 +23,9 @@ namespace Hellscape.Tests {
             
             // Assert
             Assert.That(state.id, Is.EqualTo(1));
-            Assert.That(state.x, Is.EqualTo(10.0f));
-            Assert.That(state.y, Is.EqualTo(20.0f));
-            Assert.That(state.vx, Is.EqualTo(5.0f));
+            Assert.That(state.positionX, Is.EqualTo(10.0f));
+            Assert.That(state.positionY, Is.EqualTo(20.0f));
+            Assert.That(state.velocityX, Is.EqualTo(5.0f));
             Assert.That(state.hp, Is.EqualTo(100));
             Assert.That(state.type, Is.EqualTo(0));
         }
