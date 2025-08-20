@@ -1,0 +1,51 @@
+You are Cursor working on the Hellscape repo with .cursorrules loaded.
+Do NOT run `dotnet test`. If you need to run tests, use Unity’s CLI:
+  - Windows: powershell -ExecutionPolicy Bypass tools\unity-test.ps1
+
+### Feature
+Relay host/join with two players moving under thin server authority (no gameplay rules, just movement).
+
+### Scope
+- Use NGO + UnityTransport + Relay (RelayBootstrap already present).
+- Player prefab `NetPlayer` with NetworkObject:
+  - Reads local input (New Input System) ONLY on the owner.
+  - Samples a **normalized Vector2 move** from input.
+  - Sends move to server via `[ServerRpc(RequireOwnership=true)]` at ~20 Hz (throttled).
+  - Server integrates kinematic motion (speed/accel/decel) and writes position into a `NetworkVariable<Vector2>`.
+  - All clients render from the replicated position. Owner also snaps to server position each frame.
+
+### Requirements
+1) **NetworkManager setup**
+   - Ensure a `NetworkManager` + `UnityTransport` exists in the scene.
+   - Set **Player Prefab** to `NetPlayer` (prefab only; no scene instance).
+   - Set `NetworkManager.NetworkConfig.TickRate = 50`.
+
+2) **Scripts**
+   - `Assets/Hellscape/Scripts/Net/NetPlayer.cs : NetworkBehaviour`
+     - Fields: `moveSpeed=6f`, `accel=40f`, `decel=20f`.
+     - `NetworkVariable<Vector2> netPos` (ReadPermission=Everyone, WritePermission=Server).
+     - Owner-only input read (Input System). Disable input on non-owners.
+     - **FixedUpdate** (server): integrate velocity from last received move; clamp speed.
+     - **ServerRpc**: `SubmitInputServerRpc(Vector2 move)`; store per-player latest input.
+     - **Update**: non-owners set `transform.position = netPos.Value`; owner also snaps to `netPos.Value` (simple; we’ll add interpolation later).
+
+3) **Relay glue**
+   - Reuse `RelayBootstrap` (Host/Join UI). After host/client starts, NGO auto-spawns `NetPlayer` via Player Prefab.
+
+4) **Tests (minimal)**
+   - If a blittable struct is introduced (e.g., `InputMove { float x,y; }`), add a small serialization test in Edit Mode.
+   - Networking handshake is validated manually (compile & run).
+
+5) **Acceptance**
+   - Start two instances. Host → get join code → Client joins.
+   - Both move with WASD/stick; both see each other move smoothly.
+   - Works in Editor on Windows; later WebGL will use wss automatically via RelayBootstrap.
+
+### File placement
+- `Assets/Hellscape/Scripts/Net/NetPlayer.cs`
+- `Assets/Hellscape/Prefabs/NetPlayer.prefab` (SpriteRenderer + NetworkObject; optional Collider2D)
+
+### Output
+- List of created/modified files.
+- Short test/run instructions (Host/Join).
+- Suggested Conventional Commit messages (feat:, test:, etc.).
