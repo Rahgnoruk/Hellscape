@@ -131,6 +131,7 @@ namespace Hellscape.Net
             if (!Application.isPlaying) { return; }
             if (NetworkManager.Singleton && !NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient)
             {
+                NetworkManager.Singleton.NetworkConfig.TickRate = 50;
                 if (GUI.Button(new Rect(pad, y, w, h), "Host via Relay"))
                 {
                     _ = StartHostAsync();
