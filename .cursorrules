@@ -72,3 +72,10 @@ TESTING: TDD-first. Unit + integration tests in Edit Mode (NUnit). Golden-master
 - No physics-authoritative movement in Domain (use kinematic math).
 - No gameplay logic inside NetworkBehaviours / MonoBehaviours.
 - No reliance on Update order; visuals may lag one frame from Domain.
+
+## Product Brief (stable)
+CAMERA: 2D top-down, orthographic (URP 2D lights). No depth gameplay.
+PLAYER LOOK: Single sprite; “animation” = flash/scale on hit, micro-hop on move, particles on attack. No skeletal rigs.
+ENEMIES: Commons are single-tag (Fast, Armored, Meaty, Ranged, Swarm, Poison, Screamer, Jumper, Berserk). Elites are dual-tag only.
+COMBAT: Toy-first. Readable telegraphs; counters exist per type. TTK bands enforced in tests.
+ART: Fixed palette + gradient map post; minimal VFX; no frame-by-frame anims.
