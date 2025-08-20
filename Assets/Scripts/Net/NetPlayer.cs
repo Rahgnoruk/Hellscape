@@ -48,14 +48,21 @@ namespace Hellscape.Net
             // Everyone renders from replicated position
             transform.position = netPos.Value;
 
-            if (!IsOwner || _controls == null) return;
-
+            if (_controls == null) return;
             _rpcAccum += Time.deltaTime;
             if (_rpcAccum >= (1f / Mathf.Max(1f, rpcRate)))
             {
                 var mv = _moveInput.sqrMagnitude > 1f ? _moveInput.normalized : _moveInput;
                 SubmitInputServerRpc(mv);
                 _rpcAccum = 0f;
+            }
+            if (!IsOwner)
+            {
+                transform.position = Vector2.Lerp(transform.position, netPos.Value, 0.18f);
+            }
+            else
+            {
+                transform.position = netPos.Value;
             }
         }
 
