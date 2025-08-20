@@ -113,7 +113,7 @@ Swarm 0.2–0.6s; Fast 0.5–1.0s; Screamer 0.5–0.8s; Ranged 0.8–1.2s (1.5�
 * **Move:** WASD/left stick.
 * **Aim:** Mouse cursor/right stick.
 * **Fire/Alt:** LMB/RMB or triggers.
-* **Dash:** Space/B.
+* **Dash:** Shift/B.
 * **Use/Revive:** E/X.
 
 **Feel cheats:** hit‑stop on melee, camera impulse on big hits, muzzle flashes, flashlight cone, screen vignette at high intensity.
@@ -175,7 +175,7 @@ Swarm 0.2–0.6s; Fast 0.5–1.0s; Screamer 0.5–0.8s; Ranged 0.8–1.2s (1.5�
 
 ## 11. Milestones
 
-* **v0.4.0 (SP slice):** Night/Ring, city grid, shovel melee, 2 enemy types, 8 tests.
+* **v0.4.0 (SP slice):** Night/Ring, city grid, shovel melee, pistol ranged, 2 enemy types, 8 tests.
 * **v0.8.0 (MP):** Relay host/join, two players moving, snapshot basics, WebGL build.
 * **v0.12.0 (AI):** Director, 6 commons, 3 elites, perf caps.
 * **v1.0.0 (Demo):** UX polish, telemetry, public WebGL page.
