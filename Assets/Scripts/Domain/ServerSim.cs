@@ -5,7 +5,6 @@ using Hellscape.World;
 
 namespace Hellscape.Core {
     public sealed class ServerSim {
-        private readonly ITransport transport;
         private readonly DeterministicRng rng;
         private int tick;
 
@@ -21,10 +20,8 @@ namespace Hellscape.Core {
         private int nextId = 1;
 
 
-        public ServerSim(ITransport transport, int seed) {
-            this.transport = transport;
+        public ServerSim(int seed) {
             this.rng = new DeterministicRng(seed);
-            transport.OnServerMsg = OnClientToServer;
         }
 
 
@@ -52,11 +49,6 @@ namespace Hellscape.Core {
 
             // TODO: spawn logic by ring & night; send snapshot deltas
             // For single-player we can skip serialization for now
-        }
-
-
-        private void OnClientToServer(byte[] msg) {
-        // TODO: parse InputCommand, apply to player actor
         }
 
 

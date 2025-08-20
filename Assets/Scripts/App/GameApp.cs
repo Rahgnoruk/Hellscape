@@ -11,7 +11,6 @@ namespace Hellscape.Core {
 
 
         private ServerSim server;
-        private ITransport transport;
 
 
         void Awake() {
@@ -20,8 +19,7 @@ namespace Hellscape.Core {
 
 
             if (mode == GameMode.SinglePlayer) {
-                transport = new LocalTransport();
-                server = new ServerSim(transport, seed == 0 ? System.Environment.TickCount : seed);
+                server = new ServerSim(seed == 0 ? System.Environment.TickCount : seed);
                 server.Start();
             }
         }

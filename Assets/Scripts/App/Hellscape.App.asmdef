@@ -1,0 +1,16 @@
+{
+    "name": "Hellscape.App",
+    "rootNamespace": "",
+    "references": [
+        "GUID:4ddba2018c0f64d46ac01269462af94c"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
