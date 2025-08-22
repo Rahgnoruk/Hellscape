@@ -1,6 +1,6 @@
 # Hellscape — Game Design Document (GDD)
 
-**Version:** 0.1 (living doc) **Project:** Hellscape **Genre:** 2D top‑down co‑op survival‑run **Camera:** Orthographic (URP 2D), top‑down **Platforms:** PC, WebGL, iOS/Android (Unity 6, NGO \+ Relay) **Mode(s):** Single‑player (local host) & 2–4 player drop‑in co‑op
+**Version:** 0.1 (living doc) **Project:** Hellscape **Genre:** 2D top‑down co‑op survival‑run **Camera:** Orthographic (URP 2D), top‑down **Platforms:** PC, WebGL, iOS/Android (Unity 6, NGO \+ Relay) **Mode(s):** Single‑player (local host) & 2–16 player drop‑in co‑op
 
 Drop-in co-op run into a burning city. Each night, a corruption ring expands outward. Stronger loot and enemies lie deeper toward the center. Survive, scavenge, push the ring back by destroying the portal—before it swallows the last safe blocks.
 
