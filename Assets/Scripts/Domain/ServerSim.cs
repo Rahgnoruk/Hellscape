@@ -73,24 +73,33 @@ namespace Hellscape.Domain {
                 }
             }
 
-            // Handle enemy AI
+            // 2) Enemy AI + contact damage
             foreach (var a in actors.Values) {
-                if (a.team == Team.Enemy) {
-                    UpdateEnemyAI(a, deltaTime);
+                a.Tick(deltaTime);
+                if (a.type == ActorType.Enemy && a.alive) EnemyAttackPlayers(ref a, deltaTime);
+            }
+
+            // 3) Lives ticking
             int alivePlayers = CountAlivePlayers();
             life.Tick(deltaTime, alivePlayers);
 
             // 4) Respawns
             var rs = life.ConsumeRespawns();
             foreach (var id in rs) RespawnPlayer(id);
+
+            // 5) cull dead enemies if hp<=0
+            var toRemove = new List<int>();
+            foreach (var a in actors.Values) {
+                if (a.type == ActorType.Enemy && a.hp <= 0) {
+                    toRemove.Add(a.id);
                 }
+            }
+            foreach (var id in toRemove) {
+                RemoveActor(id);
             }
 
             night.Tick(deltaTime);
             director.Tick();
-
-            // Advance simple actors (server-authoritative)
-            foreach (var a in actors.Values) a.Tick(deltaTime);
 
             // Clamp all actors to playfield bounds
             foreach (var a in actors.Values) {
@@ -310,6 +319,47 @@ namespace Hellscape.Domain {
                 if (a.type==ActorType.Player && a.alive) c++; 
             return c; 
         }
+
+        private void EnemyAttackPlayers(ref Actor enemy, float dt) {
+            enemy.attackCd -= dt;
+            if (enemy.attackCd > 0f) return;
+            
+            const float attackRange = 0.75f;
+            const short damage = 10;
+            
+            // find nearest alive player within range
+            int targetId = -1; 
+            float bestDistSq = 999999f;
+            foreach (var kv in actors) {
+                var p = kv.Value;
+                if (p.type != ActorType.Player || !p.alive) continue;
+                
+                var dx = p.pos.x - enemy.pos.x; 
+                var dy = p.pos.y - enemy.pos.y;
+                var dsq = dx*dx + dy*dy;
+                
+                if (dsq < bestDistSq) { 
+                    bestDistSq = dsq; 
+                    targetId = kv.Key; 
+                }
+            }
+            
+            if (targetId >= 0 && bestDistSq <= attackRange*attackRange) {
+                var player = actors[targetId];
+                if (player.alive) {
+                    // simple normal damage (no armor for players yet)
+                    player.hp = (short)System.Math.Max(0, player.hp - damage);
+                    if (player.hp <= 0) {
+                        player.alive = false;
+                        life.MarkDead(player.id);
+                        player.vel = Vector2.zero;
+                    }
+                    actors[targetId] = player;
+                    enemy.attackCd = 0.8f;
+                }
+            }
+        }
+
         private void RespawnPlayer(int actorId) {
             if (!actors.TryGetValue(actorId, out var p)) return;
             
@@ -339,6 +389,7 @@ namespace Hellscape.Domain {
             public float moveSpeed;
             public float flinchTimer;
             public bool alive = true;
+            public float attackCd; // for enemies
             
             // Dash state
             private float dashCooldownRemaining;
@@ -406,7 +457,6 @@ namespace Hellscape.Domain {
             }
 
             public ActorState ToActorState() {
-                return new ActorState(id, pos.x, pos.y, vel.x, vel.y, hp, (byte)type, team, radius);
                 return new ActorState(id, pos.x, pos.y, vel.x, vel.y, hp, (byte)type, team, radius, alive);
             }
             
