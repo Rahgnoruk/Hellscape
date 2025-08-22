@@ -71,7 +71,11 @@ namespace Hellscape.Net
         byte BuildButtons()
         {
             byte b = 0;
-            if (_fireHeld || _firePressedThisTick) b |= MovementConstants.AttackButtonBit; // Fire
+            if (_fireHeld || _firePressedThisTick)
+            {
+                b |= MovementConstants.AttackButtonBit;
+            }
+            // Fire
             // if you wire dash later: if (_dashPressedThisTick) b |= MovementConstants.DashButtonBit;
             _firePressedThisTick = false; // edge reset each tick window
             return b;
@@ -107,12 +111,8 @@ namespace Hellscape.Net
 
         // Input callbacks (owner)
         public void OnMove(InputAction.CallbackContext ctx) => _moveInput = ctx.ReadValue<Vector2>();
-        public void OnLook(InputAction.CallbackContext ctx) { } // Keep for compatibility
-        public void OnAimPos(InputAction.CallbackContext ctx) => _aimPosInput = ctx.ReadValue<Vector2>();
-        public void OnAimStick(InputAction.CallbackContext ctx) => _aimStickInput = ctx.ReadValue<Vector2>();
-        public void OnAttack(InputAction.CallbackContext ctx) { } // Keep for compatibility
-        public void OnFire(InputAction.CallbackContext ctx) 
-        {
+        public void OnLook(InputAction.CallbackContext ctx) { }
+        public void OnAttack(InputAction.CallbackContext ctx) {
             if (ctx.performed)
             {
                 _fireHeld = true;
