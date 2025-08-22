@@ -3,7 +3,7 @@ namespace Hellscape.Domain {
         // Weapon parameters
         public const float PistolDamage = 25f;
         public const float PistolRange = 12f;
-        public const int PistolCooldownTicks = 8; // @50Hz ≈ 0.16s
+        public const float PistolCooldownSeconds = 0.15f;
         
         // Enemy parameters
         public const float EnemySpeed = 3.5f;
