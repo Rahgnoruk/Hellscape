@@ -516,6 +516,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   seed: 42
   netEnemyPrefab: {fileID: 1234567890123456789, guid: b8cb042beb3d1724ebbddc3e13bd257d, type: 3}
+  shotVfx: {fileID: 2036123465}
 --- !u!1 &2011775931
 GameObject:
   m_ObjectHideFlags: 0
@@ -620,6 +621,52 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2036123464
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2036123466}
+  - component: {fileID: 2036123465}
+  m_Layer: 0
+  m_Name: ShotVFX
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2036123465
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2036123464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9add712cc93a28e4196ea246d9dd3619, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Hellscape.Net::Hellscape.Net.ShotVfx
+  tracerPrefab: {fileID: 1234567890123456789, guid: 50976f405bb232b4a8f6b8f897651031, type: 3}
+  muzzleFlashPrefab: {fileID: 1234567890123456793, guid: 747302d3545c3d04691efa516521de3e, type: 3}
+--- !u!4 &2036123466
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2036123464}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.20765, y: 4.89217, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -630,3 +677,4 @@ SceneRoots:
   - {fileID: 1548386464}
   - {fileID: 1979876506}
   - {fileID: 1691319218}
+  - {fileID: 2036123466}
