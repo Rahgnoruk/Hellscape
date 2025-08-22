@@ -6,7 +6,7 @@ namespace Hellscape.Net
     public interface INetSimBridge
     {
         void RegisterNetPlayerServer(NetPlayer player);
-        void SubmitInputFrom(ulong clientId, Vector2 move, byte buttons = 0);
+        void SubmitInputFrom(ulong clientId, Vector2 move, Vector2 aim, byte buttons = 0);
     }
 
     // Static hook where the App layer installs its bridge instance.
