@@ -83,6 +83,7 @@ namespace Hellscape.Net
         
         void Update()
         {
+            transform.position = netPos.Value;
             if (_controls == null) return;
             _rpcAccum += Time.deltaTime;
             if (_rpcAccum >= (1f / Mathf.Max(1f, rpcRate)))
