@@ -17,6 +17,8 @@ namespace Hellscape.Domain {
                 writer.Write(actor.velocityY);
                 writer.Write(actor.hp);
                 writer.Write(actor.type);
+                writer.Write((byte)actor.team);
+                writer.Write(actor.radius);
             }
             
             return stream.ToArray();
@@ -38,8 +40,10 @@ namespace Hellscape.Domain {
                 var velocityY = reader.ReadSingle();
                 var hp = reader.ReadInt16();
                 var type = reader.ReadByte();
+                var team = (Team)reader.ReadByte();
+                var radius = reader.ReadSingle();
                 
-                actors[i] = new ActorState(id, positionX, positionY, velocityX, velocityY, hp, type);
+                actors[i] = new ActorState(id, positionX, positionY, velocityX, velocityY, hp, type, team, radius);
             }
             
             return new WorldSnapshot(tick, actors);
