@@ -33,6 +33,9 @@ namespace Hellscape.Domain {
         
         // Lives system
         private LifeSystem lifeSystem;
+        
+        // Team score
+        private int teamScore;
 
         public ServerSim(int seed) {
             this.rng = new DeterministicRng(seed);
@@ -94,10 +97,11 @@ namespace Hellscape.Domain {
                     toRemove.Add(enemyActor.id);
                 }
             }
-            // 3) Remove dead enemies
+            // 3) Remove dead enemies and increment score
             foreach (var id in toRemove)
             {
                 RemoveEnemyActor(id);
+                teamScore += 1; // Increment score for each enemy killed
             }
             // 4) Update all player actors
             foreach (var playerActor in playerActors.Values)
@@ -339,6 +343,16 @@ namespace Hellscape.Domain {
         public Vector2 GetRandomEdgePositionForBridge(float inset) => GetRandomEdgePosition(inset);
 
         public float GetReviveSecondsRemaining() => lifeSystem.ReviveSecondsRemaining;
+        
+        public int GetTeamScore() => teamScore;
+        
+        public int GetDeadPlayerCount() {
+            int dead = 0;
+            foreach (var actor in playerActors.Values) {
+                if (actor.type == ActorType.Player && !actor.alive) dead++;
+            }
+            return dead;
+        }
 
         private int CountAlivePlayers() {
             int alivePlayers = 0;
