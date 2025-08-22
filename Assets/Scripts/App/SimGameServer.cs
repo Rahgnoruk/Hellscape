@@ -132,7 +132,7 @@ namespace Hellscape.App
             {
                 clientToActor.Remove(clientId);
                 actorToNetPlayer.Remove(actorId);
-                sim.RemoveActor(actorId);
+                sim.RemovePlayerActor(actorId);
             }
         }
 
