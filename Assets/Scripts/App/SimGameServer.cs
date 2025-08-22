@@ -173,6 +173,8 @@ namespace Hellscape.App
                 if (sim.TryGetActorState(actorId, out var st))
                 {
                     view.netPos.Value = new Vector2(st.positionX, st.positionY);
+                    view.netHp.Value = st.hp;
+                    view.netAlive.Value = st.alive;
                 }
             }
             
