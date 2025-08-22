@@ -5,8 +5,10 @@ namespace Hellscape.Domain {
         public float velocityX, velocityY;
         public short hp;
         public byte type;
+        public Team team;
+        public float radius;
         
-        public ActorState(int id, float positionX, float positionY, float velocityX, float velocityY, short hp, byte type) {
+        public ActorState(int id, float positionX, float positionY, float velocityX, float velocityY, short hp, byte type, Team team, float radius) {
             this.id = id;
             this.positionX = positionX;
             this.positionY = positionY;
@@ -14,6 +16,8 @@ namespace Hellscape.Domain {
             this.velocityY = velocityY;
             this.hp = hp;
             this.type = type;
+            this.team = team;
+            this.radius = radius;
         }
     }
 }
