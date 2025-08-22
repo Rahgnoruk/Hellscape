@@ -19,7 +19,7 @@ namespace Hellscape.Tests {
         [Test]
         public void ActorState_Creation_Works() {
             // Arrange & Act
-            var state = new ActorState(1, 10.0f, 20.0f, 5.0f, 0.0f, 100, 0);
+            var state = new ActorState(1, 10.0f, 20.0f, 5.0f, 0.0f, 100, 0, Team.Player, 0.45f);
             
             // Assert
             Assert.That(state.id, Is.EqualTo(1));
@@ -28,6 +28,8 @@ namespace Hellscape.Tests {
             Assert.That(state.velocityX, Is.EqualTo(5.0f));
             Assert.That(state.hp, Is.EqualTo(100));
             Assert.That(state.type, Is.EqualTo(0));
+            Assert.That(state.team, Is.EqualTo(Team.Player));
+            Assert.That(state.radius, Is.EqualTo(0.45f));
         }
         
         [Test]
