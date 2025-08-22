@@ -15,7 +15,7 @@ namespace Hellscape.Net
     {
 
         [SerializeField] string environment = "production"; // or "staging", per UGS project
-        [SerializeField] int maxConnections = 3; // host + N clients
+        [SerializeField] int maxConnections = 16; // host + N clients
 
 
         string lastJoinCode = string.Empty;
