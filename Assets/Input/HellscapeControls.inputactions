@@ -25,36 +25,9 @@
                     "initialStateCheck": true
                 },
                 {
-                    "name": "AimPos",
-                    "type": "PassThrough",
-                    "id": "b2f8c4e1-9a3d-4e8f-9c5a-1e2f3d4e5f6a",
-                    "expectedControlType": "Vector2",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": true
-                },
-                {
-                    "name": "AimStick",
-                    "type": "PassThrough",
-                    "id": "c3f9d5f2-0b4e-4f9a-8d6b-2e3f4g5h6i7b",
-                    "expectedControlType": "Vector2",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": true
-                },
-                {
                     "name": "Attack",
                     "type": "Button",
                     "id": "79322f38-9abc-4438-b676-5fbdfd71b926",
-                    "expectedControlType": "",
-                    "processors": "",
-                    "interactions": "",
-                    "initialStateCheck": false
-                },
-                {
-                    "name": "Fire",
-                    "type": "Button",
-                    "id": "89322f38-9abc-4438-b676-5fbdfd71b927",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -283,39 +256,6 @@
                 },
                 {
                     "name": "",
-                    "id": "d2f8c4e1-9a3d-4e8f-9c5a-1e2f3d4e5f6b",
-                    "path": "<Pointer>/position",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Keyboard&Mouse;Touch",
-                    "action": "AimPos",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "e3f9d5f2-0b4e-4f9a-8d6b-2e3f4g5h6i7c",
-                    "path": "<Touchscreen>/primaryTouch/position",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Touch",
-                    "action": "AimPos",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "f4f9d5f2-0b4e-4f9a-8d6b-2e3f4g5h6i7d",
-                    "path": "<Gamepad>/rightStick",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Gamepad",
-                    "action": "AimStick",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
                     "id": "116fa71a-24dd-4437-af68-55b44c443ac9",
                     "path": "<Gamepad>/buttonWest",
                     "interactions": "",
@@ -377,28 +317,6 @@
                     "processors": "",
                     "groups": "Keyboard&Mouse",
                     "action": "Attack",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "d16eb32a-86bd-431a-91f8-c03bb6090c3c",
-                    "path": "<Mouse>/leftButton",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Keyboard&Mouse",
-                    "action": "Fire",
-                    "isComposite": false,
-                    "isPartOfComposite": false
-                },
-                {
-                    "name": "",
-                    "id": "37dbbf71-b192-427d-95fb-2a579444a45d",
-                    "path": "<Gamepad>/rightTrigger",
-                    "interactions": "",
-                    "processors": "",
-                    "groups": ";Gamepad",
-                    "action": "Fire",
                     "isComposite": false,
                     "isPartOfComposite": false
                 },
