@@ -15,11 +15,14 @@ namespace Hellscape.App
         [SerializeField] int seed = 42;
         [SerializeField] GameObject netEnemyPrefab;
         [SerializeField] ShotVfx shotVfx; // assign in scene
+        [SerializeField] int enemyCap = 28;
+        [SerializeField] float spawnInterval = 2.5f;
 
         private ServerSim sim;
         private readonly Dictionary<ulong, int> clientToActor = new();     // NGO client → Domain actor
         private readonly Dictionary<int, NetPlayer> actorToNetPlayer = new(); // Domain actor → Net view
         private readonly Dictionary<int, NetEnemy> actorToNetEnemy = new(); // Domain actor → Net enemy view
+        private float spawnTimer;
 
         void Awake()
         {
@@ -212,6 +215,15 @@ namespace Hellscape.App
                 }
             }
             foreach (var id in toRemove) actorToNetEnemy.Remove(id);
+            
+            // Continuous spawner
+            spawnTimer += Time.fixedDeltaTime;
+            if (spawnTimer >= spawnInterval && actorToNetEnemy.Count < enemyCap)
+            {
+                spawnTimer = 0f;
+                var dpos = sim.GetRandomEdgePositionForBridge(1.2f);
+                SpawnEnemyAt(new Vector2(dpos.x, dpos.y));
+            }
         }
         
         public void SubmitInputFrom(ulong clientId, Vector2 move, Vector2 aim, byte buttons = 0)
