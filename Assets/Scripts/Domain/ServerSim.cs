@@ -73,7 +73,7 @@ namespace Hellscape.Domain {
                         playerActor.gunCooldownTicks == 0) {
                         var aimDir = new Vector2(pair.Value.aimX, pair.Value.aimY);
                         if (aimDir.x != 0 || aimDir.y != 0) {
-                            ProcessShooting(playerActor, aimDir);
+                            ProcessShooting(playerActor, aimDir, deltaTime);
                         }
                     }
                 }
@@ -212,7 +212,7 @@ namespace Hellscape.Domain {
             return list;
         }
         
-        private void ProcessShooting(Actor shooter, Vector2 aimDir) {
+        private void ProcessShooting(Actor shooter, Vector2 aimDir, float deltaTime) {
             // Normalize aim direction
             var normalizedAim = ServerSimHelpers.Normalize(aimDir);
             
@@ -258,7 +258,7 @@ namespace Hellscape.Domain {
             _shotEvents.Add(new ShotEvent(rayStart, shotEnd, hit));
             
             // Set cooldown
-            shooter.gunCooldownTicks = CombatConstants.PistolCooldownTicks;
+            shooter.gunCooldownTicks = ServerSimHelpers.RoundToInt(CombatConstants.PistolCooldownSeconds / deltaTime);
         }
         
         private void UpdateEnemyAI(Actor enemy, float deltaTime) {
@@ -581,6 +581,10 @@ namespace Hellscape.Domain {
             if (value < min) return min;
             if (value > max) return max;
             return value;
+        }
+        
+        public static int RoundToInt(float value) {
+            return (int)System.Math.Round(value);
         }
     }
 }
