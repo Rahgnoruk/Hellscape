@@ -13,10 +13,12 @@ namespace Hellscape.App
         public static SimGameServer Instance { get; private set; }
 
         [SerializeField] int seed = 42;
+        [SerializeField] GameObject netEnemyPrefab;
 
         private ServerSim sim;
         private readonly Dictionary<ulong, int> clientToActor = new();     // NGO client → Domain actor
         private readonly Dictionary<int, NetPlayer> actorToNetPlayer = new(); // Domain actor → Net view
+        private readonly Dictionary<int, NetEnemy> actorToNetEnemy = new(); // Domain actor → Net enemy view
 
         void Awake()
         {
@@ -56,6 +58,14 @@ namespace Hellscape.App
             foreach (var kvp in NetworkManager.ConnectedClients)
             {
                 OnClientConnected(kvp.Key);
+            }
+            
+            // Spawn enemies at edges with both domain and network views
+            int initial = 12;
+            for (int i = 0; i < initial; i++)
+            {
+                var dpos = sim.GetRandomEdgePositionForBridge(1.5f);
+                SpawnEnemyAt(new Vector2(dpos.x, dpos.y));
             }
         }
         void OnDestroy()
@@ -124,17 +134,8 @@ namespace Hellscape.App
 
         public void SubmitInputFrom(ulong clientId, Vector2 move, byte buttons = 0)
         {
-            if (!IsServer) return;
-            if (!clientToActor.TryGetValue(clientId, out var actorId)) return;
-
-            // We’re not using per-actor aim yet; just pass zeros for now.
-            var cmd = new InputCommand(
-              tick: 0, // not used by sim right now; sim consumes "latest"
-              moveX: move.x, moveY: move.y,
-              aimX: 0f, aimY: 0f,
-              buttons: buttons
-            );
-            sim.ApplyForActor(actorId ,cmd);
+            // Redirect to the new signature with zero aim for backward compatibility
+            SubmitInputFrom(clientId, move, Vector2.zero, buttons);
         }
 
         void FixedUpdate()
@@ -144,7 +145,21 @@ namespace Hellscape.App
             // Tick authoritative sim
             sim.Tick(Time.fixedDeltaTime);
 
-            // Push sim positions into replicated NetVariables
+            // Process combat events
+            while (sim.TryDequeueEvent(out var domainEvent))
+            {
+                switch (domainEvent.kind)
+                {
+                    case DomainEvent.Kind.HitLanded:
+                        Debug.Log($"Hit landed: {domainEvent.attackerId} -> {domainEvent.targetId} ({domainEvent.damage} damage)");
+                        break;
+                    case DomainEvent.Kind.ActorDied:
+                        HandleActorDeath(domainEvent.targetId);
+                        break;
+                }
+            }
+
+            // Push sim positions into replicated NetVariables for players
             foreach (var kvp in actorToNetPlayer)
             {
                 var actorId = kvp.Key;
@@ -155,6 +170,88 @@ namespace Hellscape.App
                 {
                     view.netPos.Value = new Vector2(st.positionX, st.positionY);
                 }
+            }
+            
+            // Push sim positions into replicated NetVariables for enemies and cleanup dead ones
+            var toRemove = new List<int>();
+            foreach (var kvp in actorToNetEnemy)
+            {
+                var actorId = kvp.Key;
+                var view = kvp.Value;
+                if (view == null || !view.IsSpawned) { toRemove.Add(actorId); continue; }
+
+                if (sim.TryGetActorState(actorId, out var st))
+                {
+                    view.netPos.Value = new Vector2(st.positionX, st.positionY);
+                    view.netHp.Value = st.hp;
+                    if (st.hp <= 0)
+                    {
+                        // Server despawns the view; client receives it via NGO
+                        view.NetworkObject.Despawn(true);
+                        toRemove.Add(actorId);
+                    }
+                }
+                else
+                {
+                    // Actor no longer exists in sim; clean up view
+                    view.NetworkObject.Despawn(true);
+                    toRemove.Add(actorId);
+                }
+            }
+            foreach (var id in toRemove) actorToNetEnemy.Remove(id);
+        }
+        
+        public void SubmitInputFrom(ulong clientId, Vector2 move, Vector2 aim, byte buttons = 0)
+        {
+            if (!IsServer) return;
+            if (!clientToActor.TryGetValue(clientId, out var actorId)) return;
+
+            var cmd = new InputCommand(
+              tick: 0, // not used by sim right now; sim consumes "latest"
+              moveX: move.x, moveY: move.y,
+              aimX: aim.x, aimY: aim.y,
+              buttons: buttons
+            );
+            sim.ApplyForActor(actorId, cmd);
+        }
+        
+        public int SpawnEnemyAt(Vector2 position)
+        {
+            if (!IsServer) return -1;
+            
+            var actorId = sim.SpawnEnemyAt(new DVec2(position.x, position.y));
+            
+            if (netEnemyPrefab != null)
+            {
+                var enemyObj = Instantiate(netEnemyPrefab, position, Quaternion.identity);
+                var netEnemy = enemyObj.GetComponent<NetEnemy>();
+                if (netEnemy != null)
+                {
+                    netEnemy.NetworkObject.Spawn(true);
+                    netEnemy.SetActorIdServerRpc(actorId);
+                    actorToNetEnemy[actorId] = netEnemy;
+                    
+                    // Initialize net vars so clients see correct initial state
+                    if (sim.TryGetActorState(actorId, out var st))
+                    {
+                        netEnemy.netPos.Value = new Vector2(st.positionX, st.positionY);
+                        netEnemy.netHp.Value = st.hp;
+                    }
+                }
+            }
+            
+            return actorId;
+        }
+        
+        private void HandleActorDeath(int actorId)
+        {
+            if (actorToNetEnemy.TryGetValue(actorId, out var netEnemy))
+            {
+                if (netEnemy != null && netEnemy.IsSpawned)
+                {
+                    netEnemy.DespawnServerRpc();
+                }
+                actorToNetEnemy.Remove(actorId);
             }
         }
     }
