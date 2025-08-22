@@ -321,7 +321,7 @@ public partial class @HellscapeControls: IInputActionCollection2, IDisposable
                 {
                     ""name"": """",
                     ""id"": ""5f2c0baa-c4d1-46af-a14f-872b642df037"",
-                    ""path"": ""<Pointer>/delta"",
+                    ""path"": ""<Pointer>/position"",
                     ""interactions"": """",
                     ""processors"": """",
                     ""groups"": "";Keyboard&Mouse;Touch"",
