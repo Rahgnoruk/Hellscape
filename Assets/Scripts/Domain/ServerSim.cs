@@ -15,9 +15,11 @@ namespace Hellscape.Domain {
         // Playfield bounds
         private readonly Vector2 playfieldHalfExtents = new Vector2(25f, 14f);
 
-        // Actors (toy implementation)
-        private readonly Dictionary<int, Actor> actors = new();
-        public bool RemoveActor(int actorId) => actors.Remove(actorId);
+        // Actors
+        private readonly Dictionary<int, Actor> playerActors = new();
+        private readonly Dictionary<int, Actor> enemyActors = new();
+        public bool RemovePlayerActor(int actorId) => playerActors.Remove(actorId);
+        public bool RemoveEnemyActor(int actorId) => enemyActors.Remove(actorId);
 
         private int nextId = 1;
 
@@ -30,7 +32,7 @@ namespace Hellscape.Domain {
         private readonly List<ShotEvent> _shotEvents = new();
         
         // Lives system
-        private LifeSystem life;
+        private LifeSystem lifeSystem;
 
         public ServerSim(int seed) {
             this.rng = new DeterministicRng(seed);
@@ -40,7 +42,7 @@ namespace Hellscape.Domain {
             grid = new CityGrid(64, 64, 32); // width, height, centerRadius
             night = new NightSystem();
             director = new Director();
-            life = new LifeSystem(10f);
+            lifeSystem = new LifeSystem(10f);
         }
 
         public void Tick(float deltaTime) {
@@ -49,9 +51,10 @@ namespace Hellscape.Domain {
             // 1) Apply inputs only if actor is alive
             foreach (var pair in _latestByActor)
             {
-                if (actors.TryGetValue(pair.Key, out var a) && a.type == ActorType.Player && a.alive)
+                if (playerActors.TryGetValue(pair.Key, out var playerActor) &&
+                    playerActor.alive)
                 {
-                    a.ApplyInput(
+                    playerActor.ApplyInput(
                       pair.Value,
                       MovementConstants.PlayerSpeed,
                       MovementConstants.PlayerAcceleration,
@@ -62,49 +65,62 @@ namespace Hellscape.Domain {
                     );
                     
                     // Handle shooting for players
-                    if (a.team == Team.Player &&
+                    if (playerActor.team == Team.Player &&
                         (pair.Value.buttons & MovementConstants.AttackButtonBit) != 0 &&
-                        a.gunCooldownTicks == 0) {
+                        playerActor.gunCooldownTicks == 0) {
                         var aimDir = new Vector2(pair.Value.aimX, pair.Value.aimY);
                         if (aimDir.x != 0 || aimDir.y != 0) {
-                            ProcessShooting(a, aimDir);
+                            ProcessShooting(playerActor, aimDir);
                         }
                     }
                 }
             }
 
-            // 2) Enemy AI + contact damage
-            foreach (var a in actors.Values) {
-                a.Tick(deltaTime);
-                if (a.type == ActorType.Enemy && a.alive) EnemyAttackPlayers(ref a, deltaTime);
-            }
-
-            // 3) Lives ticking
-            int alivePlayers = CountAlivePlayers();
-            life.Tick(deltaTime, alivePlayers);
-
-            // 4) Respawns
-            var rs = life.ConsumeRespawns();
-            foreach (var id in rs) RespawnPlayer(id);
-
-            // 5) cull dead enemies if hp<=0
+            // 2) Update all enemies
             var toRemove = new List<int>();
-            foreach (var a in actors.Values) {
-                if (a.type == ActorType.Enemy && a.hp <= 0) {
-                    toRemove.Add(a.id);
+            foreach (var enemyActor in enemyActors.Values) {
+                // 2.1) Tick actors
+                enemyActor.Tick(deltaTime);
+                // 2.2) Clamp all actors to playfield bounds
+                enemyActor.pos = ClampToPlayfield(enemyActor.pos);
+                // 2.3) Enemy AI + contact damage
+                if (enemyActor.alive)
+                {
+                    UpdateEnemyAI(enemyActor, deltaTime);
+                }
+                // 2.4) Mark enemies for removal if hp<=0
+                if (enemyActor.hp <= 0)
+                {
+                    toRemove.Add(enemyActor.id);
                 }
             }
-            foreach (var id in toRemove) {
-                RemoveActor(id);
+            // 3) Remove dead enemies
+            foreach (var id in toRemove)
+            {
+                RemoveEnemyActor(id);
             }
+            // 4) Update all player actors
+            foreach (var playerActor in playerActors.Values)
+            {
+                // 4.1) Tick actors
+                playerActor.Tick(deltaTime);
+                // 4.2) Clamp all actors to playfield bounds
+                playerActor.pos = ClampToPlayfield(playerActor.pos);
+            }
+            // 5) Tick respawn system
+            int alivePlayers = CountAlivePlayers();
+            lifeSystem.Tick(deltaTime, alivePlayers);
+
+            // 6) Respawn Players
+            var toRespawn = lifeSystem.ConsumeRespawns();
+            foreach (var id in toRespawn)
+            {
+                RespawnPlayer(id);
+            }
+
 
             night.Tick(deltaTime);
             director.Tick();
-
-            // Clamp all actors to playfield bounds
-            foreach (var a in actors.Values) {
-                a.pos = ClampToPlayfield(a.pos);
-            }
 
             // TODO: spawn logic by ring & night; send snapshot deltas
             // For single-player we can skip serialization for now
@@ -116,9 +132,13 @@ namespace Hellscape.Domain {
         }
 
         public WorldSnapshot CreateSnapshot() {
-            var actorStates = new ActorState[actors.Count];
+            var actorStates = new ActorState[enemyActors.Count + playerActors.Count];
             int i = 0;
-            foreach (var actor in actors.Values) {
+            foreach (var actor in enemyActors.Values) {
+                actorStates[i] = actor.ToActorState();
+                i++;
+            }
+            foreach (var actor in playerActors.Values) {
                 actorStates[i] = actor.ToActorState();
                 i++;
             }
@@ -130,15 +150,20 @@ namespace Hellscape.Domain {
         public int SpawnPlayerAt(Vector2 pos)
         {
             var id = nextId++;
-            actors[id] = new Actor(id, pos, ActorType.Player);
+            playerActors[id] = new Actor(id, pos, ActorType.Player);
             return id;
         }
 
         public bool TryGetActorState(int id, out ActorState state)
         {
-            if (actors.TryGetValue(id, out var a))
+            if (enemyActors.TryGetValue(id, out var actor))
             {
-                state = a.ToActorState();
+                state = actor.ToActorState();
+                return true;
+            }
+            if (playerActors.TryGetValue(id, out actor))
+            {
+                state = actor.ToActorState();
                 return true;
             }
             state = default;
@@ -148,13 +173,18 @@ namespace Hellscape.Domain {
         public int SpawnEnemyAt(Vector2 pos)
         {
             var id = nextId++;
-            actors[id] = new Actor(id, pos, ActorType.Enemy);
+            enemyActors[id] = new Actor(id, pos, ActorType.Enemy);
             return id;
         }
         
         public void SetActorHp(int actorId, short hp)
         {
-            if (actors.TryGetValue(actorId, out var actor))
+            if (enemyActors.TryGetValue(actorId, out var actor))
+            {
+                actor.hp = hp;
+                return;
+            }
+            if (playerActors.TryGetValue(actorId, out actor))
             {
                 actor.hp = hp;
             }
@@ -192,14 +222,12 @@ namespace Hellscape.Domain {
             Vector2 shotEnd = rayEnd;
 
             // Test against all enemies using robust hitscan
-            foreach (var actor in actors.Values) {
-                if (actor.team == Team.Enemy) {
-                    if (Hitscan.SegmentCircle(rayStart, rayEnd, actor.pos, actor.radius, out float linePointClosestToCenter)) {
-                        if (linePointClosestToCenter < closestImpact) {
-                            closestImpact = linePointClosestToCenter;
-                            firstHitEnemy = actor;
-                            shotEnd = rayStart + normalizedAim * linePointClosestToCenter * CombatConstants.PistolRange;
-                        }
+            foreach (var enemyActor in enemyActors.Values) {
+                if (Hitscan.SegmentCircle(rayStart, rayEnd, enemyActor.pos, enemyActor.radius, out float linePointClosestToCenter)) {
+                    if (linePointClosestToCenter < closestImpact) {
+                        closestImpact = linePointClosestToCenter;
+                        firstHitEnemy = enemyActor;
+                        shotEnd = rayStart + normalizedAim * linePointClosestToCenter * CombatConstants.PistolRange;
                     }
                 }
             }
@@ -218,7 +246,7 @@ namespace Hellscape.Domain {
                 // Check for death
                 if (firstHitEnemy.hp <= 0) {
                     EnqueueEvent(DomainEvent.ActorDied(firstHitEnemy.id));
-                    RemoveActor(firstHitEnemy.id);
+                    RemoveEnemyActor(firstHitEnemy.id);
                 }
             }
             
@@ -240,13 +268,11 @@ namespace Hellscape.Domain {
             Actor nearestPlayer = null;
             float nearestDistance = float.MaxValue;
             
-            foreach (var actor in actors.Values) {
-                if (actor.team == Team.Player) {
-                    var distance = ServerSimHelpers.Distance(enemy.pos, actor.pos);
-                    if (distance < nearestDistance && distance <= CombatConstants.EnemySenseRange) {
-                        nearestDistance = distance;
-                        nearestPlayer = actor;
-                    }
+            foreach (var playerActor in playerActors.Values) {
+                var distance = ServerSimHelpers.Distance(enemy.pos, playerActor.pos);
+                if (distance < nearestDistance && distance <= CombatConstants.EnemySenseRange) {
+                    nearestDistance = distance;
+                    nearestPlayer = playerActor;
                 }
             }
             
@@ -257,6 +283,7 @@ namespace Hellscape.Domain {
                 
                 float t = ServerSimHelpers.Clamp01(MovementConstants.PlayerAcceleration * deltaTime);
                 enemy.vel = ServerSimHelpers.Lerp(enemy.vel, targetVel, t);
+                EnemyAttackPlayers(ref enemy, deltaTime);
             } else {
                 // Slow to stop
                 float t = ServerSimHelpers.Clamp01(MovementConstants.PlayerDeceleration * deltaTime);
@@ -311,64 +338,69 @@ namespace Hellscape.Domain {
         // PUBLIC: app/bridge access (keeps one source of truth)
         public Vector2 GetRandomEdgePositionForBridge(float inset) => GetRandomEdgePosition(inset);
 
-        public float GetReviveSecondsRemaining() => life.ReviveSecondsRemaining;
-        
-        private int CountAlivePlayers() { 
-            int c=0; 
-            foreach (var a in actors.Values) 
-                if (a.type==ActorType.Player && a.alive) c++; 
-            return c; 
+        public float GetReviveSecondsRemaining() => lifeSystem.ReviveSecondsRemaining;
+
+        private int CountAlivePlayers() {
+            int alivePlayers = 0;
+            foreach (var playerActor in playerActors.Values)
+            {
+                if (playerActor.alive)
+                {
+                    alivePlayers++;
+                }
+            }
+            return alivePlayers; 
         }
 
-        private void EnemyAttackPlayers(ref Actor enemy, float dt) {
-            enemy.attackCd -= dt;
+        private void EnemyAttackPlayers(ref Actor enemy, float deltaTime) {
+            enemy.attackCd -= deltaTime;
             if (enemy.attackCd > 0f) return;
             
             const float attackRange = 0.75f;
             const short damage = 10;
             
             // find nearest alive player within range
-            int targetId = -1; 
+            int targetId = -1;
             float bestDistSq = 999999f;
-            foreach (var kv in actors) {
-                var p = kv.Value;
-                if (p.type != ActorType.Player || !p.alive) continue;
+            foreach (var idToPlayer in playerActors) {
+                var playerActor = idToPlayer.Value;
+                if (!playerActor.alive) continue;
                 
-                var dx = p.pos.x - enemy.pos.x; 
-                var dy = p.pos.y - enemy.pos.y;
-                var dsq = dx*dx + dy*dy;
+                var distanceX = playerActor.pos.x - enemy.pos.x; 
+                var distanceY = playerActor.pos.y - enemy.pos.y;
+                var distanceSq = distanceX*distanceX + distanceY*distanceY;
                 
-                if (dsq < bestDistSq) { 
-                    bestDistSq = dsq; 
-                    targetId = kv.Key; 
+                if (distanceSq < bestDistSq) { 
+                    bestDistSq = distanceSq; 
+                    targetId = idToPlayer.Key; 
                 }
             }
             
             if (targetId >= 0 && bestDistSq <= attackRange*attackRange) {
-                var player = actors[targetId];
+                var player = playerActors[targetId];
                 if (player.alive) {
                     // simple normal damage (no armor for players yet)
                     player.hp = (short)System.Math.Max(0, player.hp - damage);
                     if (player.hp <= 0) {
                         player.alive = false;
-                        life.MarkDead(player.id);
+                        lifeSystem.MarkDead(player.id);
                         player.vel = Vector2.zero;
                     }
-                    actors[targetId] = player;
+                    playerActors[targetId] = player;
                     enemy.attackCd = 0.8f;
                 }
             }
         }
 
         private void RespawnPlayer(int actorId) {
-            if (!actors.TryGetValue(actorId, out var p)) return;
+            if (!playerActors.TryGetValue(actorId, out var olayer)) return;
             
-            p.alive = true;
-            p.hp = 80; // respawn health
-            p.pos = SafeRespawnPosition();
-            p.vel = Vector2.zero;
+            olayer.alive = true;
+            olayer.hp = 80; // respawn health
+            olayer.pos = SafeRespawnPosition();
+            olayer.vel = Vector2.zero;
             // clear dash cd etc. if needed
-            actors[actorId] = p;
+            playerActors[actorId] = olayer;
         }
 
         private Vector2 SafeRespawnPosition() {
