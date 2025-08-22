@@ -287,5 +287,15 @@ namespace Hellscape.App
                 actorToNetEnemy.Remove(actorId);
             }
         }
+        
+        void OnGUI()
+        {
+            if (IsServer || IsClient)
+            {
+                float t = sim != null ? sim.GetReviveSecondsRemaining() : 0f;
+                if (t > 0.01f)
+                    GUI.Label(new Rect(10, 110, 320, 30), $"Revive in: {t:0.0}s (stay alive!)");
+            }
+        }
     }
 }
