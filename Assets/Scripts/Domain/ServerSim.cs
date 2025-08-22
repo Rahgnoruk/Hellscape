@@ -28,6 +28,9 @@ namespace Hellscape.Domain {
         
         // Shot events for VFX
         private readonly List<ShotEvent> _shotEvents = new();
+        
+        // Lives system
+        private LifeSystem life;
 
         public ServerSim(int seed) {
             this.rng = new DeterministicRng(seed);
@@ -37,15 +40,16 @@ namespace Hellscape.Domain {
             grid = new CityGrid(64, 64, 32); // width, height, centerRadius
             night = new NightSystem();
             director = new Director();
+            life = new LifeSystem(10f);
         }
 
         public void Tick(float deltaTime) {
             tick++;
 
-            // Handle player input and shooting
+            // 1) Apply inputs only if actor is alive
             foreach (var pair in _latestByActor)
             {
-                if (actors.TryGetValue(pair.Key, out var a))
+                if (actors.TryGetValue(pair.Key, out var a) && a.type == ActorType.Player && a.alive)
                 {
                     a.ApplyInput(
                       pair.Value,
@@ -73,6 +77,12 @@ namespace Hellscape.Domain {
             foreach (var a in actors.Values) {
                 if (a.team == Team.Enemy) {
                     UpdateEnemyAI(a, deltaTime);
+            int alivePlayers = CountAlivePlayers();
+            life.Tick(deltaTime, alivePlayers);
+
+            // 4) Respawns
+            var rs = life.ConsumeRespawns();
+            foreach (var id in rs) RespawnPlayer(id);
                 }
             }
 
@@ -292,6 +302,30 @@ namespace Hellscape.Domain {
         // PUBLIC: app/bridge access (keeps one source of truth)
         public Vector2 GetRandomEdgePositionForBridge(float inset) => GetRandomEdgePosition(inset);
 
+        public float GetReviveSecondsRemaining() => life.ReviveSecondsRemaining;
+        
+        private int CountAlivePlayers() { 
+            int c=0; 
+            foreach (var a in actors.Values) 
+                if (a.type==ActorType.Player && a.alive) c++; 
+            return c; 
+        }
+        private void RespawnPlayer(int actorId) {
+            if (!actors.TryGetValue(actorId, out var p)) return;
+            
+            p.alive = true;
+            p.hp = 80; // respawn health
+            p.pos = SafeRespawnPosition();
+            p.vel = Vector2.zero;
+            // clear dash cd etc. if needed
+            actors[actorId] = p;
+        }
+
+        private Vector2 SafeRespawnPosition() {
+            // reuse outskirts or near edge helper if present; otherwise pick (-10, 6)
+            return new Vector2(-10f, 6f);
+        }
+        
         // Minimal inner Actor for the server
         private enum ActorType { Player = 0, Enemy = 1 }
         private sealed class Actor {
@@ -304,6 +338,7 @@ namespace Hellscape.Domain {
             public float radius;
             public float moveSpeed;
             public float flinchTimer;
+            public bool alive = true;
             
             // Dash state
             private float dashCooldownRemaining;
@@ -372,6 +407,7 @@ namespace Hellscape.Domain {
 
             public ActorState ToActorState() {
                 return new ActorState(id, pos.x, pos.y, vel.x, vel.y, hp, (byte)type, team, radius);
+                return new ActorState(id, pos.x, pos.y, vel.x, vel.y, hp, (byte)type, team, radius, alive);
             }
             
             private void TryShoot(Vector2 aimDir) {
