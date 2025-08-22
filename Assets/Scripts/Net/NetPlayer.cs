@@ -112,7 +112,9 @@ namespace Hellscape.Net
 
         // Input callbacks (owner)
         public void OnMove(InputAction.CallbackContext ctx) => _moveInput = ctx.ReadValue<Vector2>();
-        public void OnLook(InputAction.CallbackContext ctx) { }
+        public void OnLook(InputAction.CallbackContext ctx) { 
+            _aimPosInput = ctx.ReadValue<Vector2>();
+        }
         public void OnAttack(InputAction.CallbackContext ctx) {
             if (ctx.performed)
             {
