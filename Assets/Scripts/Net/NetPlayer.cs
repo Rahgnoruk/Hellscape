@@ -9,9 +9,12 @@ namespace Hellscape.Net
     public sealed class NetPlayer : NetworkBehaviour, HellscapeControls.IPlayerActions
     {
         [SerializeField] float rpcRate = 20f; // Hz
+        [SerializeField] SpriteRenderer spriteRenderer; // assign in inspector
 
         public readonly NetworkVariable<Vector2> netPos =
           new(writePerm: NetworkVariableWritePermission.Server);
+        public readonly NetworkVariable<short> netHp = new(writePerm: NetworkVariableWritePermission.Server);
+        public readonly NetworkVariable<bool> netAlive = new(writePerm: NetworkVariableWritePermission.Server);
 
         private HellscapeControls _controls;
         private Vector2 _moveInput;
@@ -84,7 +87,27 @@ namespace Hellscape.Net
         void Update()
         {
             transform.position = netPos.Value;
+            
+            // Visual feedback for dead players
+            if (spriteRenderer != null)
+            {
+                if (!netAlive.Value)
+                {
+                    // Gray out dead players
+                    spriteRenderer.color = new Color(0.5f, 0.5f, 0.5f, 0.7f);
+                }
+                else
+                {
+                    // Normal color for alive players
+                    spriteRenderer.color = Color.white;
+                }
+            }
+            
             if (_controls == null) return;
+            
+            // Ignore input if dead
+            if (IsOwner && netAlive.Value == false) return;
+            
             _rpcAccum += Time.deltaTime;
             if (_rpcAccum >= (1f / Mathf.Max(1f, rpcRate)))
             {

@@ -198,7 +198,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 385912495
+  GlobalObjectIdHash: 951636529
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -225,6 +225,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Hellscape.Net::Hellscape.Net.NetPlayer
   ShowTopMostFoldoutHeaderGroup: 1
   rpcRate: 20
+  spriteRenderer: {fileID: 6156685245328484834}
 --- !u!114 &6143236618306965665
 MonoBehaviour:
   m_ObjectHideFlags: 0
