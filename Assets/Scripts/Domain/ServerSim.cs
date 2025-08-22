@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Hellscape.Domain;
+using Hellscape.Domain.Combat;
 
 namespace Hellscape.Domain {
     public sealed class ServerSim {
@@ -24,6 +25,9 @@ namespace Hellscape.Domain {
         
         // Event system
         private readonly Queue<DomainEvent> eventQueue = new();
+        
+        // Shot events for VFX
+        private readonly List<ShotEvent> _shotEvents = new();
 
         public ServerSim(int seed) {
             this.rng = new DeterministicRng(seed);
@@ -54,7 +58,9 @@ namespace Hellscape.Domain {
                     );
                     
                     // Handle shooting for players
-                    if (a.team == Team.Player && (pair.Value.buttons & MovementConstants.AttackButtonBit) != 0 && a.gunCooldownTicks == 0) {
+                    if (a.team == Team.Player &&
+                        (pair.Value.buttons & MovementConstants.AttackButtonBit) != 0 &&
+                        a.gunCooldownTicks == 0) {
                         var aimDir = new Vector2(pair.Value.aimX, pair.Value.aimY);
                         if (aimDir.x != 0 || aimDir.y != 0) {
                             ProcessShooting(a, aimDir);
@@ -145,50 +151,60 @@ namespace Hellscape.Domain {
             return eventQueue.TryDequeue(out e);
         }
         
+        // Expose a safe consumer for shot events
+        public IReadOnlyList<ShotEvent> ConsumeShotEvents()
+        {
+            var list = _shotEvents.ToArray();
+            _shotEvents.Clear();
+            return list;
+        }
+        
         private void ProcessShooting(Actor shooter, Vector2 aimDir) {
             // Normalize aim direction
             var normalizedAim = ServerSimHelpers.Normalize(aimDir);
             
-            // Find first enemy hit by ray
+            // Compute ray start and end
             var rayStart = shooter.pos;
             var rayEnd = shooter.pos + normalizedAim * CombatConstants.PistolRange;
             
-            Actor closestEnemy = null;
-            float closestDistance = float.MaxValue;
-            
+            Actor firstHitEnemy = null;
+            float closestImpact = float.MaxValue;
+            bool hit = false;
+            Vector2 shotEnd = rayEnd;
+
+            // Test against all enemies using robust hitscan
             foreach (var actor in actors.Values) {
                 if (actor.team == Team.Enemy) {
-                    var hitPoint = ServerSimHelpers.ClosestPointOnLineSegment(rayStart, rayEnd, actor.pos);
-                    var distanceToRay = ServerSimHelpers.Distance(actor.pos, hitPoint);
-                    
-                    if (distanceToRay <= actor.radius) {
-                        var projection = ServerSimHelpers.Distance(rayStart, hitPoint);
-                        if (projection <= CombatConstants.PistolRange) {
-                            if (projection < closestDistance) {
-                                closestDistance = projection;
-                                closestEnemy = actor;
-                            }
+                    if (Hitscan.SegmentCircle(rayStart, rayEnd, actor.pos, actor.radius, out float linePointClosestToCenter)) {
+                        if (linePointClosestToCenter < closestImpact) {
+                            closestImpact = linePointClosestToCenter;
+                            firstHitEnemy = actor;
+                            shotEnd = rayStart + normalizedAim * linePointClosestToCenter * CombatConstants.PistolRange;
                         }
                     }
                 }
             }
             
-            if (closestEnemy != null) {
+            if (firstHitEnemy != null) {
+                hit = true;
                 // Apply damage
-                closestEnemy.hp -= (short)CombatConstants.PistolDamage;
+                firstHitEnemy.hp -= (short)CombatConstants.PistolDamage;
                 
                 // Apply flinch timer
-                closestEnemy.flinchTimer = 0.1f; // 0.1s flinch
+                firstHitEnemy.flinchTimer = 0.1f; // 0.1s flinch
                 
                 // Emit hit event
-                EnqueueEvent(DomainEvent.HitLanded(shooter.id, closestEnemy.id, CombatConstants.PistolDamage));
+                EnqueueEvent(DomainEvent.HitLanded(shooter.id, firstHitEnemy.id, CombatConstants.PistolDamage));
                 
                 // Check for death
-                if (closestEnemy.hp <= 0) {
-                    EnqueueEvent(DomainEvent.ActorDied(closestEnemy.id));
-                    RemoveActor(closestEnemy.id);
+                if (firstHitEnemy.hp <= 0) {
+                    EnqueueEvent(DomainEvent.ActorDied(firstHitEnemy.id));
+                    RemoveActor(firstHitEnemy.id);
                 }
             }
+            
+            // Enqueue shot event for VFX
+            _shotEvents.Add(new ShotEvent(rayStart, shotEnd, hit));
             
             // Set cooldown
             shooter.gunCooldownTicks = CombatConstants.PistolCooldownTicks;
@@ -373,14 +389,6 @@ namespace Hellscape.Domain {
             {
                 return ServerSimHelpers.Clamp01(x);
             }
-            
-            private static Vector2 ClosestPointOnLineSegment(Vector2 lineStart, Vector2 lineEnd, Vector2 point) {
-                return ServerSimHelpers.ClosestPointOnLineSegment(lineStart, lineEnd, point);
-            }
-            
-            private static float Distance(Vector2 a, Vector2 b) {
-                return ServerSimHelpers.Distance(a, b);
-            }
         }
     }
 
@@ -417,16 +425,6 @@ namespace Hellscape.Domain {
             if (x < 0f) return 0f;
             if (x > 1f) return 1f;
             return x;
-        }
-        
-        public static Vector2 ClosestPointOnLineSegment(Vector2 lineStart, Vector2 lineEnd, Vector2 point) {
-            var line = lineEnd - lineStart;
-            var lineLength = line.x * line.x + line.y * line.y;
-            
-            if (lineLength == 0) return lineStart;
-            
-            var t = Clamp01(((point.x - lineStart.x) * line.x + (point.y - lineStart.y) * line.y) / lineLength);
-            return lineStart + line * t;
         }
         
         public static float Distance(Vector2 a, Vector2 b) {
