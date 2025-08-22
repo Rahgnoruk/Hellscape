@@ -10,6 +10,7 @@
 /[Bb]uilds/
 /[Ll]ogs/
 /[Uu]ser[Ss]ettings/
+/[Cc]hat[Gg][Pp][Tt][Uu]ploads/
 *.log
 
 # MemoryCaptures can get excessive in size.
