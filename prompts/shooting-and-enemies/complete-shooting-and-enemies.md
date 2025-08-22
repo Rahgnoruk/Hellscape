@@ -1,5 +1,6 @@
 You are Cursor working on the Hellscape repo with .cursorrules loaded.
-Do NOT run `dotnet test`. For tests, use Unity’s CLI script (PowerShell at `docs/tools/unity-test.ps1`).
+Do NOT run `dotnet test`. For tests, use Unity’s CLI script 
+- Windows: powershell -ExecutionPolicy Bypass -File docs\tools\unity-test.ps1
 
 ### Feature
 MP pistol shooting + basic enemy (“Damned”) under thin server authority. Two players can host/join, aim, and fire pistols to kill a spawned enemy.

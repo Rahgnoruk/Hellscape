@@ -1,6 +1,6 @@
 You are Cursor working on the Hellscape repo with `.cursorrules` loaded.
 **Do NOT** run `dotnet test`. For tests, use Unity’s CLI script:
-`pwsh docs/tools/unity-test.ps1 -Platform EditMode`
+- Windows: powershell -ExecutionPolicy Bypass -File docs\tools\unity-test.ps1
 
 **Goal:** Enemies visibly spawn at the playfield edges and move toward players. Their positions/HP replicate to all clients.
 
