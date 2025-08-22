@@ -102,6 +102,7 @@ GameObject:
   - component: {fileID: 6156685245328484834}
   - component: {fileID: 5913573036388981451}
   - component: {fileID: 8705812655520960707}
+  - component: {fileID: 6143236618306965665}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -195,7 +196,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
-  GlobalObjectIdHash: 951636529
+  GlobalObjectIdHash: 385912495
   InScenePlacedSourceGlobalObjectIdHash: 0
   DeferredDespawnTick: 0
   Ownership: 1
@@ -222,3 +223,18 @@ MonoBehaviour:
   m_EditorClassIdentifier: Hellscape.Net::Hellscape.Net.NetPlayer
   ShowTopMostFoldoutHeaderGroup: 1
   rpcRate: 20
+--- !u!114 &6143236618306965665
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4530160279158277798}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1be312467df8ee94483fb874ac71b7ea, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Hellscape.Presentation::Hellscape.Presentation.AimVisual
+  ShowTopMostFoldoutHeaderGroup: 1
+  gun: {fileID: 454956020649187765}
+  minAimLen: 0.001
