@@ -1,5 +1,5 @@
+using System;
 using System.Collections.Generic;
-using Hellscape.Domain;
 using Hellscape.Domain.Combat;
 
 namespace Hellscape.Domain {
@@ -258,7 +258,7 @@ namespace Hellscape.Domain {
             _shotEvents.Add(new ShotEvent(rayStart, shotEnd, hit));
             
             // Set cooldown
-            shooter.gunCooldownTicks = ServerSimHelpers.RoundToInt(CombatConstants.PistolCooldownSeconds / deltaTime);
+            shooter.gunCooldownTicks = (int)Math.Round(CombatConstants.PistolCooldownSeconds / deltaTime);
         }
         
         private void UpdateEnemyAI(Actor enemy, float deltaTime) {
@@ -357,7 +357,8 @@ namespace Hellscape.Domain {
         public int GetAlivePlayerCount() {
             int alive = 0;
             foreach (var actor in playerActors.Values) {
-                if (actor.type == ActorType.Player && actor.alive) alive++;
+                if (actor.alive)
+                    alive++;
             }
             return alive;
         }
@@ -581,10 +582,6 @@ namespace Hellscape.Domain {
             if (value < min) return min;
             if (value > max) return max;
             return value;
-        }
-        
-        public static int RoundToInt(float value) {
-            return (int)System.Math.Round(value);
         }
     }
 }
