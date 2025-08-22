@@ -7,7 +7,7 @@ namespace Hellscape.Domain {
         
         // Enemy parameters
         public const float EnemySpeed = 3.5f;
-        public const float EnemySenseRange = 20f;
+        public const float EnemySenseRange = 50f;
         public const float EnemyRadius = 0.5f;
         public const float PlayerRadius = 0.45f;
     }
