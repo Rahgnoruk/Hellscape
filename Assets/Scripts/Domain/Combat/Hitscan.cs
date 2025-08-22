@@ -38,11 +38,11 @@ namespace Hellscape.Domain.Combat
     public struct ShotEvent
     {
         public Vector2 start, end;
-        public bool hit; // optional
-        public ShotEvent(Vector2 s, Vector2 e, bool h) {
-            start = s;
-            end = e;
-            hit = h;
+        public bool didHit; // optional
+        public ShotEvent(Vector2 shotStart, Vector2 shotEnd, bool didHit) {
+            this.start = shotStart;
+            this.end = shotEnd;
+            this.didHit = didHit;
         }
     }
 }
