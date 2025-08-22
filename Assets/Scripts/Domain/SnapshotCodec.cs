@@ -19,6 +19,7 @@ namespace Hellscape.Domain {
                 writer.Write(actor.type);
                 writer.Write((byte)actor.team);
                 writer.Write(actor.radius);
+                writer.Write(actor.alive);
             }
             
             return stream.ToArray();
@@ -42,8 +43,9 @@ namespace Hellscape.Domain {
                 var type = reader.ReadByte();
                 var team = (Team)reader.ReadByte();
                 var radius = reader.ReadSingle();
+                var alive = reader.ReadBoolean();
                 
-                actors[i] = new ActorState(id, positionX, positionY, velocityX, velocityY, hp, type, team, radius);
+                actors[i] = new ActorState(id, positionX, positionY, velocityX, velocityY, hp, type, team, radius, alive);
             }
             
             return new WorldSnapshot(tick, actors);

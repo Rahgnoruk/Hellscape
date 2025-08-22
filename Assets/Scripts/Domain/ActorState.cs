@@ -7,8 +7,9 @@ namespace Hellscape.Domain {
         public byte type;
         public Team team;
         public float radius;
+        public bool alive;
         
-        public ActorState(int id, float positionX, float positionY, float velocityX, float velocityY, short hp, byte type, Team team, float radius) {
+        public ActorState(int id, float positionX, float positionY, float velocityX, float velocityY, short hp, byte type, Team team, float radius, bool alive) {
             this.id = id;
             this.positionX = positionX;
             this.positionY = positionY;
@@ -18,6 +19,7 @@ namespace Hellscape.Domain {
             this.type = type;
             this.team = team;
             this.radius = radius;
+            this.alive = alive;
         }
     }
 }
