@@ -517,6 +517,8 @@ MonoBehaviour:
   seed: 42
   netEnemyPrefab: {fileID: 1234567890123456789, guid: b8cb042beb3d1724ebbddc3e13bd257d, type: 3}
   shotVfx: {fileID: 2036123465}
+  enemyCap: 28
+  spawnInterval: 1
 --- !u!1 &2011775931
 GameObject:
   m_ObjectHideFlags: 0
@@ -652,6 +654,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Hellscape.Net::Hellscape.Net.ShotVfx
   tracerPrefab: {fileID: 1234567890123456789, guid: 50976f405bb232b4a8f6b8f897651031, type: 3}
   muzzleFlashPrefab: {fileID: 1234567890123456793, guid: 747302d3545c3d04691efa516521de3e, type: 3}
+  tracerLifetime: 0.06
+  tracerInstances: []
 --- !u!4 &2036123466
 Transform:
   m_ObjectHideFlags: 0
