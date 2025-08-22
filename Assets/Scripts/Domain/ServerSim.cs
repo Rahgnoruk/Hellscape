@@ -404,8 +404,12 @@ namespace Hellscape.Domain {
         }
 
         private Vector2 SafeRespawnPosition() {
-            // reuse outskirts or near edge helper if present; otherwise pick (-10, 6)
-            return new Vector2(-10f, 6f);
+            foreach(var actor in playerActors.Values) {
+                if (actor.alive) {
+                    return new Vector2(actor.pos.x + 2f, actor.pos.y + 2f);
+                }
+            }
+            return new Vector2(0,0);
         }
         
         // Minimal inner Actor for the server
