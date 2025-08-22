@@ -14,6 +14,7 @@ namespace Hellscape.App
 
         [SerializeField] int seed = 42;
         [SerializeField] GameObject netEnemyPrefab;
+        [SerializeField] ShotVfx shotVfx; // assign in scene
 
         private ServerSim sim;
         private readonly Dictionary<ulong, int> clientToActor = new();     // NGO client → Domain actor
@@ -172,6 +173,18 @@ namespace Hellscape.App
                 }
             }
             
+            // Process shot events and broadcast VFX
+            var shots = sim.ConsumeShotEvents();
+            if (shots != null)
+            {
+                foreach (var shot in shots)
+                {
+                    var sStart = new Vector2(shot.start.x, shot.start.y);
+                    var sEnd = new Vector2(shot.end.x, shot.end.y);
+                    ShotFxClientRpc(sStart, sEnd);
+                }
+            }
+            
             // Push sim positions into replicated NetVariables for enemies and cleanup dead ones
             var toRemove = new List<int>();
             foreach (var kvp in actorToNetEnemy)
@@ -241,6 +254,12 @@ namespace Hellscape.App
             }
             
             return actorId;
+        }
+        
+        [ClientRpc]
+        void ShotFxClientRpc(Vector2 start, Vector2 end)
+        {
+            if (shotVfx != null) shotVfx.PlayTracer(start, end);
         }
         
         private void HandleActorDeath(int actorId)
