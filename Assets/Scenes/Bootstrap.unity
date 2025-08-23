@@ -385,7 +385,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Hellscape.Net.RelayBootstrap
   environment: production
-  maxConnections: 3
+  maxConnections: 16
 --- !u!1001 &1691319218
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -517,8 +517,11 @@ MonoBehaviour:
   seed: 42
   netEnemyPrefab: {fileID: 1234567890123456789, guid: b8cb042beb3d1724ebbddc3e13bd257d, type: 3}
   shotVfx: {fileID: 2036123465}
-  enemyCap: 28
-  spawnInterval: 1
+  baseSpawnInterval: 1
+  minSpawnInterval: 0.1
+  baseEnemyCap: 30
+  maxEnemyCap: 60
+  rampSeconds: 360
 --- !u!1 &2011775931
 GameObject:
   m_ObjectHideFlags: 0
