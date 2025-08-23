@@ -78,9 +78,8 @@ namespace Hellscape.Domain {
                     }
                 }
             }
-
+            var deadEnemies = new List<int>();
             // 2) Update all enemies
-            var toRemove = new List<int>();
             foreach (var enemyActor in enemyActors.Values) {
                 // 2.1) Tick actors
                 enemyActor.Tick(deltaTime);
@@ -94,12 +93,13 @@ namespace Hellscape.Domain {
                 // 2.4) Mark enemies for removal if hp<=0
                 if (enemyActor.hp <= 0)
                 {
-                    toRemove.Add(enemyActor.id);
+                    deadEnemies.Add(enemyActor.id);
                 }
             }
             // 3) Remove dead enemies and increment score
-            foreach (var id in toRemove)
+            foreach (var id in deadEnemies)
             {
+                EnqueueEvent(DomainEvent.ActorDied(id));
                 RemoveEnemyActor(id);
                 teamScore += 1; // Increment score for each enemy killed
             }
@@ -246,12 +246,6 @@ namespace Hellscape.Domain {
                 
                 // Emit hit event
                 EnqueueEvent(DomainEvent.HitLanded(shooter.id, firstHitEnemy.id, CombatConstants.PistolDamage));
-                
-                // Check for death
-                if (firstHitEnemy.hp <= 0) {
-                    EnqueueEvent(DomainEvent.ActorDied(firstHitEnemy.id));
-                    RemoveEnemyActor(firstHitEnemy.id);
-                }
             }
             
             // Enqueue shot event for VFX
