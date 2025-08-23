@@ -324,11 +324,6 @@ namespace Hellscape.App
             return actorToNetEnemy.Count;
         }
         
-        void Update()
-        {
-            if (IsServer && netGameOver.Value && Input.GetKeyDown(KeyCode.R)) RestartRun();
-        }
-        
         void RestartRun()
         {
             // Despawn enemies you've spawned (keep references in a list as you spawn them)
@@ -372,18 +367,28 @@ namespace Hellscape.App
         {
             if (IsServer || IsClient)
             {
-                float t = sim != null ? sim.GetReviveSecondsRemaining() : 0f;
-                if (t > 0.01f)
-                    GUI.Label(new Rect(10, 110, 320, 30), $"Revive in: {t:0.0}s (stay alive!)");
+                float timeToPlayerRespawn = netReviveSeconds.Value;
+                if (timeToPlayerRespawn > 0.01f)
+                {
+                    GUI.Label(new Rect(10, 110, 320, 30), $"{netDeadAwaiting.Value} players revive in: {timeToPlayerRespawn:0.0}s. Stay Alive!");
+                }
             }
-            
+            // Center message on screen
+            string message = $"Score: {netTeamScore.Value}";
+            GUI.Label(new Rect(10, 200, 480, 80), message);
+
             if (netGameOver.Value)
             {
-                var msg = $"GAME OVER\nFinal Score: {netTeamScore.Value}\n";
-                GUI.Label(new Rect(10, 200, 480, 80), msg);
+                message = $"GAME OVER\nFinal Score: {netTeamScore.Value}\n";
+                GUI.Label(new Rect(10, 200, 480, 80), message);
                 if (IsServer)
                 {
-                    if (GUI.Button(new Rect(10, 280, 220, 40), "Restart Run (R)")) RestartRun();
+                    GUI.skin.button.alignment = TextAnchor.MiddleCenter;
+                    GUI.skin.button.fontSize = 20;
+                    if (GUI.Button(new Rect(10, 280, 220, 40), "Restart Run (R)"))
+                    {
+                        RestartRun();
+                    }
                 }
             }
         }
