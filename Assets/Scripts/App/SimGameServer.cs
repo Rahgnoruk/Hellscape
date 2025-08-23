@@ -23,6 +23,7 @@ namespace Hellscape.App
         private readonly Dictionary<int, NetPlayer> actorToNetPlayer = new(); // Domain actor → Net view
         private readonly Dictionary<int, NetEnemy> actorToNetEnemy = new(); // Domain actor → Net enemy view
         private float spawnTimer;
+        public readonly NetworkVariable<int> netTeamScore = new(writePerm: NetworkVariableWritePermission.Server);
         // Spawning difficulty ramp
         [SerializeField] float baseSpawnInterval = 3.0f;
         [SerializeField] float minSpawnInterval = 0.75f;
@@ -226,9 +227,7 @@ namespace Hellscape.App
             }
             foreach (var id in toRemove) actorToNetEnemy.Remove(id);
             
-            // Continuous spawner
-            spawnTimer += Time.fixedDeltaTime;
-            if (spawnTimer >= spawnInterval && actorToNetEnemy.Count < enemyCap)
+            netTeamScore.Value = sim.GetTeamScore();
             elapsed += Time.fixedDeltaTime;
             if (!netGameOver.Value)
             {
