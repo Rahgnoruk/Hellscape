@@ -46,7 +46,7 @@ namespace Hellscape.Net
             tracerInstance.transform.right = dir.normalized;
             tracerInstance.transform.localScale = new Vector3(len, tracerInstance.transform.localScale.y, 1f);
             tracerInstance.transform.position = start + dir * 0.5f; // center it on the line
-            StartCoroutine(DeactivateTracerInSeconds(tracerInstance, 0.06f)); // very brief
+            StartCoroutine(DeactivateTracerInSeconds(tracerInstance, tracerLifetime));
         }
         private IEnumerator DeactivateTracerInSeconds(GameObject tracerInstance, float duration)
         {
