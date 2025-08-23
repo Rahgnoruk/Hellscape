@@ -23,6 +23,14 @@ namespace Hellscape.App
         private readonly Dictionary<int, NetPlayer> actorToNetPlayer = new(); // Domain actor → Net view
         private readonly Dictionary<int, NetEnemy> actorToNetEnemy = new(); // Domain actor → Net enemy view
         private float spawnTimer;
+        // Spawning difficulty ramp
+        [SerializeField] float baseSpawnInterval = 3.0f;
+        [SerializeField] float minSpawnInterval = 0.75f;
+        [SerializeField] int baseEnemyCap = 16;
+        [SerializeField] int maxEnemyCap = 60;
+        [SerializeField] float rampSeconds = 360f; // reach full difficulty by 6 minutes
+        
+        private float elapsed;
 
         void Awake()
         {
@@ -221,10 +229,20 @@ namespace Hellscape.App
             // Continuous spawner
             spawnTimer += Time.fixedDeltaTime;
             if (spawnTimer >= spawnInterval && actorToNetEnemy.Count < enemyCap)
+            elapsed += Time.fixedDeltaTime;
+            if (!netGameOver.Value)
             {
-                spawnTimer = 0f;
-                var dpos = sim.GetRandomEdgePositionForBridge(1.2f);
-                SpawnEnemyAt(new Vector2(dpos.x, dpos.y));
+                float t = Mathf.Clamp01(elapsed / Mathf.Max(1f, rampSeconds));
+                float spawnInterval = Mathf.Lerp(baseSpawnInterval, minSpawnInterval, t);
+                int cap = Mathf.RoundToInt(Mathf.Lerp(baseEnemyCap, maxEnemyCap, t));
+                
+                spawnTimer += Time.fixedDeltaTime;
+                if (spawnTimer >= spawnInterval && CurrentEnemyCount() < cap)
+                {
+                    spawnTimer = 0f;
+                    var dpos = sim.GetRandomEdgePositionForBridge(1.2f);
+                    SpawnEnemyAt(new Vector2(dpos.x, dpos.y));
+                }
             }
         }
         
