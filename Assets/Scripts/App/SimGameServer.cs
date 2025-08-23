@@ -56,7 +56,7 @@ namespace Hellscape.App
         }
         void SetupServer()
         {
-            if (NetSim.Bridge != null) return;
+            if (NetSim.Bridge != null && NetSim.Bridge != this) return;
             // Install bridge so NetPlayer can reach us without referencing App
             NetSim.Bridge = this;
 
@@ -238,8 +238,10 @@ namespace Hellscape.App
             netDeadAwaiting.Value = sim.GetDeadPlayerCount();
             
             // 2) Game over check (all players dead)
-            bool allDead = (sim.GetAlivePlayerCount() == 0);
-            if (allDead) netGameOver.Value = true;
+            if (!sim.AreThereAlivePlayers())
+            {
+                netGameOver.Value = true;
+            }
             
             // 3) Ramped spawner (halt on game over)
             elapsed += Time.fixedDeltaTime;
@@ -367,6 +369,12 @@ namespace Hellscape.App
             }
             actorToNetEnemy.Clear();
         }
+        private void Exit()
+        {
+            RestartRun();
+            sim = null;
+            NetworkManager.Singleton.Shutdown();
+        }
         
         void OnGUI()
         {
@@ -378,21 +386,34 @@ namespace Hellscape.App
                     GUI.Label(new Rect(10, 110, 320, 30), $"{netDeadAwaiting.Value} players revive in: {timeToPlayerRespawn:0.0}s. Stay Alive!");
                 }
             }
-            // Center message on screen
-            string message = $"Score: {netTeamScore.Value}";
-            GUI.Label(new Rect(10, 200, 480, 80), message);
-
-            if (netGameOver.Value)
+            if (!netGameOver.Value)
             {
-                message = $"GAME OVER\nFinal Score: {netTeamScore.Value}\n";
+                // Center message on screen
+                string message = $"Score: {netTeamScore.Value}";
                 GUI.Label(new Rect(10, 200, 480, 80), message);
+            }
+            else
+            {
+                string message = $"GAME OVER\nFinal Score: {netTeamScore.Value}\n";
+                GUI.Label(new Rect(Screen.width/2, Screen.height/2, 480, 80), message);
                 if (IsServer)
                 {
                     GUI.skin.button.alignment = TextAnchor.MiddleCenter;
                     GUI.skin.button.fontSize = 20;
-                    if (GUI.Button(new Rect(10, 280, 220, 40), "Restart Run (R)"))
+                    if (GUI.Button(new Rect(Screen.width / 2, Screen.height / 2 + 80, 220, 40), "Restart Run"))
                     {
                         RestartRun();
+                    }
+                    if (GUI.Button(new Rect(Screen.width / 2 + 260, Screen.height / 2 + 80, 220, 40), "Exit"))
+                    {
+                        Exit();
+                    }
+                }
+                else
+                {
+                    if (GUI.Button(new Rect(Screen.width / 2 + 260, Screen.height / 2 + 80, 220, 40), "Exit"))
+                    {
+                        Exit();
                     }
                 }
             }
