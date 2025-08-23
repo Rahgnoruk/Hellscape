@@ -85,7 +85,7 @@ namespace Hellscape.App
                 SpawnEnemyAt(new Vector2(dpos.x, dpos.y));
             }
         }
-        void OnDestroy()
+        public override void OnDestroy()
         {
             if (NetworkManager != null)
             {
@@ -97,6 +97,7 @@ namespace Hellscape.App
             if (NetSim.Bridge == this) NetSim.Bridge = null;
 
             if (Instance == this) Instance = null;
+            base.OnDestroy();
         }
         void OnClientConnected(ulong clientId)
         {
