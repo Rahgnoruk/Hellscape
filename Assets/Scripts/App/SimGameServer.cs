@@ -15,8 +15,6 @@ namespace Hellscape.App
         [SerializeField] int seed = 42;
         [SerializeField] GameObject netEnemyPrefab;
         [SerializeField] ShotVfx shotVfx; // assign in scene
-        [SerializeField] int enemyCap = 28;
-        [SerializeField] float spawnInterval = 2.5f;
 
         private ServerSim sim;
         private readonly Dictionary<ulong, int> clientToActor = new();     // NGO client → Domain actor
@@ -31,9 +29,9 @@ namespace Hellscape.App
         public readonly NetworkVariable<int> netDeadAwaiting = new(writePerm: NetworkVariableWritePermission.Server);
         
         // Spawning difficulty ramp
-        [SerializeField] float baseSpawnInterval = 3.0f;
-        [SerializeField] float minSpawnInterval = 0.75f;
-        [SerializeField] int baseEnemyCap = 16;
+        [SerializeField] float baseSpawnInterval = 1.0f;
+        [SerializeField] float minSpawnInterval = 0.1f;
+        [SerializeField] int baseEnemyCap = 30;
         [SerializeField] int maxEnemyCap = 60;
         [SerializeField] float rampSeconds = 360f; // reach full difficulty by 6 minutes
         
