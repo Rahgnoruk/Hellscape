@@ -348,13 +348,14 @@ namespace Hellscape.Domain {
             return dead;
         }
         
-        public int GetAlivePlayerCount() {
-            int alive = 0;
+        public bool AreThereAlivePlayers() {
             foreach (var actor in playerActors.Values) {
                 if (actor.alive)
-                    alive++;
+                {
+                    return true;
+                }
             }
-            return alive;
+            return false;
         }
 
         private int CountAlivePlayers() {
