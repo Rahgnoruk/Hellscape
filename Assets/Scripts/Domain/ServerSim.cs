@@ -397,7 +397,7 @@ namespace Hellscape.Domain {
                 var player = playerActors[targetId];
                 if (player.alive) {
                     // simple normal damage (no armor for players yet)
-                    player.hp = (short)System.Math.Max(0, player.hp - damage);
+                    player.hp = (short)Math.Max(0, player.hp - damage);
                     if (player.hp <= 0) {
                         player.alive = false;
                         lifeSystem.MarkDead(player.id);
