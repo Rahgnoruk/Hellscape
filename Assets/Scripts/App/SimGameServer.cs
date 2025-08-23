@@ -126,10 +126,10 @@ namespace Hellscape.App
                 yield return null;
             }
         }
-        public void RegisterNetPlayerServer(NetPlayer p)
+        public void RegisterNetPlayerServer(NetPlayer netPlayer)
         {
             // Called from NetPlayer.OnNetworkSpawn on the SERVER side
-            var cid = p.OwnerClientId;
+            var cid = netPlayer.OwnerClientId;
             if (!clientToActor.TryGetValue(cid, out var actorId))
             {
                 // Choose a simple spawn near outskirts
@@ -138,7 +138,7 @@ namespace Hellscape.App
                 actorId = sim.SpawnPlayerAt(spawn);
                 clientToActor[cid] = actorId;
             }
-            actorToNetPlayer[actorId] = p;
+            actorToNetPlayer[actorId] = netPlayer;
         }
         void OnClientDisconnected(ulong clientId)
         {
@@ -332,16 +332,21 @@ namespace Hellscape.App
             // Recreate sim + reset counters
             sim = new ServerSim(seed);
             sim.Start();
-            elapsed = 0f; spawnTimer = 0f;
+            elapsed = 0f;
+            spawnTimer = 0f;
             netTeamScore.Value = 0;
             netGameOver.Value = false;
             
+            clientToActor.Clear();
             // Re-register players: give them actors and reset their views
-            foreach (var kv in NetworkManager.ConnectedClients)
+            foreach (var connIdToNetClient in NetworkManager.ConnectedClients)
             {
-                var po = kv.Value.PlayerObject;
-                var p = po ? po.GetComponent<Hellscape.Net.NetPlayer>() : null;
-                if (p != null) RegisterNetPlayerServer(p); // spawns domain player
+                var playerNetObject = connIdToNetClient.Value.PlayerObject;
+                var netPlayer = playerNetObject ? playerNetObject.GetComponent<NetPlayer>() : null;
+                if (netPlayer != null)
+                {
+                    RegisterNetPlayerServer(netPlayer); // spawns domain player
+                }
             }
         }
         
