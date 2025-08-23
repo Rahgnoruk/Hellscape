@@ -23,7 +23,13 @@ namespace Hellscape.App
         private readonly Dictionary<int, NetPlayer> actorToNetPlayer = new(); // Domain actor → Net view
         private readonly Dictionary<int, NetEnemy> actorToNetEnemy = new(); // Domain actor → Net enemy view
         private float spawnTimer;
+        
+        // NetworkVariables for scoring and game state
         public readonly NetworkVariable<int> netTeamScore = new(writePerm: NetworkVariableWritePermission.Server);
+        public readonly NetworkVariable<bool> netGameOver = new(writePerm: NetworkVariableWritePermission.Server);
+        public readonly NetworkVariable<float> netReviveSeconds = new(writePerm: NetworkVariableWritePermission.Server);
+        public readonly NetworkVariable<int> netDeadAwaiting = new(writePerm: NetworkVariableWritePermission.Server);
+        
         // Spawning difficulty ramp
         [SerializeField] float baseSpawnInterval = 3.0f;
         [SerializeField] float minSpawnInterval = 0.75f;
@@ -227,7 +233,16 @@ namespace Hellscape.App
             }
             foreach (var id in toRemove) actorToNetEnemy.Remove(id);
             
+            // 1) Replicate meta
             netTeamScore.Value = sim.GetTeamScore();
+            netReviveSeconds.Value = sim.GetReviveSecondsRemaining();
+            netDeadAwaiting.Value = sim.GetDeadPlayerCount();
+            
+            // 2) Game over check (all players dead)
+            bool allDead = (sim.GetAlivePlayerCount() == 0);
+            if (allDead) netGameOver.Value = true;
+            
+            // 3) Ramped spawner (halt on game over)
             elapsed += Time.fixedDeltaTime;
             if (!netGameOver.Value)
             {
@@ -305,6 +320,55 @@ namespace Hellscape.App
             }
         }
         
+        private int CurrentEnemyCount()
+        {
+            return actorToNetEnemy.Count;
+        }
+        
+        void Update()
+        {
+            if (IsServer && netGameOver.Value && Input.GetKeyDown(KeyCode.R)) RestartRun();
+        }
+        
+        void RestartRun()
+        {
+            // Despawn enemies you've spawned (keep references in a list as you spawn them)
+            DespawnAllEnemies();
+            
+            // Recreate sim + reset counters
+            sim = new ServerSim(seed);
+            sim.Start();
+            elapsed = 0f; spawnTimer = 0f;
+            netTeamScore.Value = 0;
+            netGameOver.Value = false;
+            
+            // Re-register players: give them actors and reset their views
+            foreach (var kv in NetworkManager.ConnectedClients)
+            {
+                var po = kv.Value.PlayerObject;
+                var p = po ? po.GetComponent<Hellscape.Net.NetPlayer>() : null;
+                if (p != null) RegisterNetPlayerServer(p); // spawns domain player
+            }
+        }
+        
+        private void DespawnAllEnemies()
+        {
+            var toDespawn = new List<NetEnemy>();
+            foreach (var enemy in actorToNetEnemy.Values)
+            {
+                if (enemy != null && enemy.IsSpawned)
+                {
+                    toDespawn.Add(enemy);
+                }
+            }
+            
+            foreach (var enemy in toDespawn)
+            {
+                enemy.NetworkObject.Despawn(true);
+            }
+            actorToNetEnemy.Clear();
+        }
+        
         void OnGUI()
         {
             if (IsServer || IsClient)
@@ -312,6 +376,16 @@ namespace Hellscape.App
                 float t = sim != null ? sim.GetReviveSecondsRemaining() : 0f;
                 if (t > 0.01f)
                     GUI.Label(new Rect(10, 110, 320, 30), $"Revive in: {t:0.0}s (stay alive!)");
+            }
+            
+            if (netGameOver.Value)
+            {
+                var msg = $"GAME OVER\nFinal Score: {netTeamScore.Value}\n";
+                GUI.Label(new Rect(10, 200, 480, 80), msg);
+                if (IsServer)
+                {
+                    if (GUI.Button(new Rect(10, 280, 220, 40), "Restart Run (R)")) RestartRun();
+                }
             }
         }
     }
