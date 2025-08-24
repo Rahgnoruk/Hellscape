@@ -326,7 +326,7 @@ namespace Hellscape.App
             return actorToNetEnemy.Count;
         }
         
-        void RestartRun()
+        public void RestartRun()
         {
             // Despawn enemies you've spawned (keep references in a list as you spawn them)
             DespawnAllEnemies();
@@ -369,54 +369,11 @@ namespace Hellscape.App
             }
             actorToNetEnemy.Clear();
         }
-        private void Exit()
+        public void Exit()
         {
             RestartRun();
             sim = null;
             NetworkManager.Singleton.Shutdown();
-        }
-        
-        void OnGUI()
-        {
-            if (IsServer || IsClient)
-            {
-                float timeToPlayerRespawn = netReviveSeconds.Value;
-                if (timeToPlayerRespawn > 0.01f)
-                {
-                    GUI.Label(new Rect(10, 110, 320, 30), $"{netDeadAwaiting.Value} players revive in: {timeToPlayerRespawn:0.0}s. Stay Alive!");
-                }
-            }
-            if (!netGameOver.Value)
-            {
-                // Center message on screen
-                string message = $"Score: {netTeamScore.Value}";
-                GUI.Label(new Rect(10, 200, 480, 80), message);
-            }
-            else
-            {
-                string message = $"GAME OVER\nFinal Score: {netTeamScore.Value}\n";
-                GUI.Label(new Rect(Screen.width/2, Screen.height/2, 480, 80), message);
-                if (IsServer)
-                {
-                    GUI.skin.button.alignment = TextAnchor.MiddleCenter;
-                    GUI.skin.button.fontSize = 20;
-                    if (GUI.Button(new Rect(Screen.width / 2, Screen.height / 2 + 80, 220, 40), "Restart Run"))
-                    {
-                        RestartRun();
-                    }
-                    if (GUI.Button(new Rect(Screen.width / 2 + 260, Screen.height / 2 + 80, 220, 40), "Exit"))
-                    {
-                        Exit();
-                    }
-                }
-                else
-                {
-                    if (GUI.Button(new Rect(Screen.width / 2 + 260, Screen.height / 2 + 80, 220, 40), "Exit"))
-                    {
-                        Exit();
-                    }
-                }
-            }
         }
     }
 }
