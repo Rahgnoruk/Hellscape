@@ -20,7 +20,7 @@ namespace Hellscape.Presentation.Vfx
             {
                 if (_instance == null)
                 {
-                    _instance = FindObjectOfType<ShotVfxPlayer>();
+                    _instance = FindFirstObjectByType<ShotVfxPlayer>();
                 }
                 return _instance;
             }

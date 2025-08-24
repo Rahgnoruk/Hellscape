@@ -15,6 +15,7 @@ namespace Hellscape.App
         [SerializeField] int seed = 42;
         [SerializeField] GameObject netEnemyPrefab;
         [SerializeField] ShotVfx shotVfx; // assign in scene
+        [SerializeField] public GameObject weaponPickupPrefab; // assign in scene
 
         private ServerSim sim;
         private readonly Dictionary<ulong, int> clientToActor = new();     // NGO client → Domain actor
@@ -208,6 +209,41 @@ namespace Hellscape.App
             
             return new ConsumeResult { fired = false, next = InventoryState.NewWithBase() };
         }
+        
+        // Weapon spawning methods
+        public List<WeaponSpawnRequest> GetPendingWeaponSpawns()
+        {
+            return sim.GetPendingWeaponSpawns();
+        }
+        
+        public void SpawnWeaponPickup(WeaponSpawnRequest spawnRequest)
+        {
+            if (weaponPickupPrefab == null)
+            {
+                Debug.LogWarning("WeaponPickupPrefab not assigned!");
+                return;
+            }
+            
+            // Convert Domain Vector2 to Unity Vector2
+            var unityPosition = new Vector2(spawnRequest.position.x, spawnRequest.position.y);
+            
+            // Spawn the pickup
+            var pickupObj = Instantiate(weaponPickupPrefab, unityPosition, Quaternion.identity);
+            var pickup = pickupObj.GetComponent<WeaponPickup>();
+            
+            if (pickup != null)
+            {
+                pickup.InitServer(spawnRequest.type, spawnRequest.ammo);
+                
+                // Spawn on network
+                pickupObj.GetComponent<NetworkObject>().Spawn();
+            }
+            else
+            {
+                Debug.LogError("WeaponPickup component not found on prefab!");
+                Destroy(pickupObj);
+            }
+        }
         void OnClientDisconnected(ulong clientId)
         {
             if (clientToActor.TryGetValue(clientId, out var actorId))
@@ -271,6 +307,13 @@ namespace Hellscape.App
                     var sEnd = new Vector2(shot.end.x, shot.end.y);
                     ShotFxClientRpc(sStart, sEnd);
                 }
+            }
+            
+            // Process weapon spawns from Domain
+            var pendingSpawns = GetPendingWeaponSpawns();
+            foreach (var spawnRequest in pendingSpawns)
+            {
+                SpawnWeaponPickup(spawnRequest);
             }
             
             // Push sim positions into replicated NetVariables for enemies and cleanup dead ones

@@ -36,6 +36,10 @@ namespace Hellscape.Domain {
         
         // Team score
         private int teamScore;
+        
+        // Weapon spawning
+        private WeaponSpawnSystem weaponSpawnSystem;
+        private readonly List<WeaponSpawnRequest> _pendingWeaponSpawns = new();
 
         public ServerSim(int seed) {
             this.rng = new DeterministicRng(seed);
@@ -46,6 +50,7 @@ namespace Hellscape.Domain {
             night = new NightSystem();
             director = new Director();
             lifeSystem = new LifeSystem(10f);
+            weaponSpawnSystem = new WeaponSpawnSystem(rng, playfieldHalfExtents);
         }
 
         public void Tick(float deltaTime) {
@@ -125,6 +130,11 @@ namespace Hellscape.Domain {
 
             night.Tick(deltaTime);
             director.Tick();
+
+            // Update weapon spawning
+            var currentTime = tick * deltaTime; // Approximate time
+            var newSpawns = weaponSpawnSystem.Update(currentTime, deltaTime);
+            _pendingWeaponSpawns.AddRange(newSpawns);
 
             // TODO: spawn logic by ring & night; send snapshot deltas
             // For single-player we can skip serialization for now
@@ -210,6 +220,14 @@ namespace Hellscape.Domain {
             var list = _shotEvents.ToArray();
             _shotEvents.Clear();
             return list;
+        }
+        
+        // Weapon spawn methods
+        public List<WeaponSpawnRequest> GetPendingWeaponSpawns()
+        {
+            var spawns = new List<WeaponSpawnRequest>(_pendingWeaponSpawns);
+            _pendingWeaponSpawns.Clear();
+            return spawns;
         }
         
         private void ProcessShooting(Actor shooter, Vector2 aimDir, float deltaTime) {

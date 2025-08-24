@@ -114484,6 +114484,7 @@ MonoBehaviour:
   seed: 42
   netEnemyPrefab: {fileID: 1234567890123456789, guid: b8cb042beb3d1724ebbddc3e13bd257d, type: 3}
   shotVfx: {fileID: 2036123465}
+  weaponPickupPrefab: {fileID: 1463991355265728978, guid: eee458b3cc1228b47b564e3e2290be71, type: 3}
   baseSpawnInterval: 1
   minSpawnInterval: 0.1
   baseEnemyCap: 30
@@ -114603,6 +114604,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2036123466}
   - component: {fileID: 2036123465}
+  - component: {fileID: 2036123467}
   m_Layer: 0
   m_Name: ShotVFX
   m_TagString: Untagged
@@ -114641,6 +114643,23 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &2036123467
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2036123464}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 34d135927076ce64aa074c7bbef1e5a8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Hellscape.Presentation::Hellscape.Presentation.Vfx.ShotVfxPlayer
+  muzzleFlashPrefab: {fileID: 1234567890123456793, guid: 747302d3545c3d04691efa516521de3e, type: 3}
+  tracerPrefab: {fileID: 1234567890123456789, guid: 50976f405bb232b4a8f6b8f897651031, type: 3}
+  impactSparkPrefab: {fileID: 1234567890123456793, guid: 10f9b7035637ef1449eb67c975319896, type: 3}
+  tracerSpeed: 50
+  vfxLifetime: 0.5
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

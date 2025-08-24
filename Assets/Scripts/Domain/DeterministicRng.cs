@@ -26,5 +26,10 @@ namespace Hellscape.Domain {
             var span = (uint)(maxExclusive - minInclusive);
             return (int)(u % span) + minInclusive;
         }
+        
+        public float RangeFloat(float minInclusive, float maxInclusive) {
+            var t = Next01(); // 0..1
+            return minInclusive + t * (maxInclusive - minInclusive);
+        }
     }
 }

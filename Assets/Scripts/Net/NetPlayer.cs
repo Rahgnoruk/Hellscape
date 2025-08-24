@@ -242,8 +242,13 @@ namespace Hellscape.Net
         [ServerRpc(RequireOwnership = false)]
         void SpawnDroppedWeaponServerRpc(byte weaponType, int ammo, Vector2 position)
         {
-            // TODO: Spawn dropped weapon pickup at position
-            // This would require a prefab reference and spawn logic
+            // Use the bridge to spawn dropped weapon
+            // The App layer (SimGameServer) will handle the actual spawning
+            if (NetSim.Bridge != null)
+            {
+                var spawnRequest = new WeaponSpawnRequest((WeaponType)weaponType, ammo, new Domain.Vector2(position.x, position.y), 0f);
+                NetSim.Bridge.SpawnWeaponPickup(spawnRequest);
+            }
         }
 
         [ClientRpc]

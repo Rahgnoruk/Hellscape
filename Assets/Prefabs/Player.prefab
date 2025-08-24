@@ -226,6 +226,7 @@ MonoBehaviour:
   ShowTopMostFoldoutHeaderGroup: 1
   rpcRate: 20
   spriteRenderer: {fileID: 6156685245328484834}
+  muzzleTransform: {fileID: 2406374869080324104}
 --- !u!114 &6143236618306965665
 MonoBehaviour:
   m_ObjectHideFlags: 0
