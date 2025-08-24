@@ -1,388 +1,475 @@
-You are Cursor working on the Hellscape repo with `.cursorrules` loaded.
-**Do NOT** run `dotnet test`. For tests, use Unity’s CLI:
+You are Cursor working on the Hellscape repo with .cursorrules loaded
+Do NOT run dotnet test. For tests, use Unity’s CLI:
+Windows: powershell -ExecutionPolicy Bypass -File docs\tools\unity-test.ps1
+
+
+Goal (this round)
+Authoritative weapon pickups + inventory + weapon switching, with ammo tracking and muzzle-based shot VFX (muzzle flash, tracer, impact spark) for the active weapon. No new gameplay effects (e.g., shotgun pushback) this round—just visuals.
+Players:
+Start with a permanent BasePistol (infinite ammo) in slot 0.
+
+
+Have three pickup slots (1–3).
+
+
+Can switch active slot via input (slot0…slot3).
+
+
+Can pick up weapons placed around the map: merge ammo if same type; otherwise place in empty slot, or swap by dropping the replaced weapon on the ground (never drop slot0).
+
+
+Shots originate at the current weapon’s muzzle transform (child of player’s weapon view). VFX must use this exact world position + aim direction.
+
+
+Networking:
+Server authoritative for pickups, inventory changes, ammo consumption, and fire requests.
+
+
+Replicate inventory to clients for HUD.
+
+
+UI:
+Update the existing HUD to show slots, active highlight, weapon names, and ammo (∞ for base).
+
+
+Determinism/Architecture:
+Domain owns inventory rules and DTOs. No UnityEngine in Domain.
+
+
+Net/Presentation implement Unity/NGO details.
+
+
+App composes everything and registers ports. No circular deps: Domain ← Net/Presentation; App references all, nothing references App.
+
+
+
+Architecture contracts (add/adjust)
+1) Domain (pure C#; no Unity)
+Files
+Assets/Hellscape/Scripts/Domain/Weapons/WeaponType.cs (new)
+
+
+Assets/Hellscape/Scripts/Domain/Weapons/InventoryModels.cs (new)
+
+
+Assets/Hellscape/Scripts/Domain/Weapons/InventoryLogic.cs (new)
+
+
+WeaponType.cs
+namespace Hellscape.Domain {
+  public enum WeaponType : byte {
+    None = 0,
+    BasePistol = 1,  // slot0 only, infinite ammo
+    Rifle = 10,
+    SMG   = 11,
+    Shotgun = 12
+  }
+}
+InventoryModels.cs
+namespace Hellscape.Domain {
+  public struct WeaponSlot {
+    public WeaponType type;
+    public int ammo; // -1 == infinite
+    public WeaponSlot(WeaponType t, int a){ type=t; ammo=a; }
+    public static WeaponSlot Empty => new WeaponSlot(WeaponType.None, 0);
+    public bool IsEmpty => type == WeaponType.None;
+    public bool IsInfinite => ammo < 0;
+  }
+
+  public struct InventoryState {
+    public WeaponSlot s0, s1, s2, s3;
+    public int ActiveIndex; // 0..3
+
+    public WeaponSlot Get(int i) => i==0? s0 : (i==1? s1 : (i==2? s2 : s3));
+    public void Set(int i, WeaponSlot v){ if(i==0) s0=v; else if(i==1) s1=v; else if(i==2) s2=v; else s3=v; }
+
+    public static InventoryState NewWithBase() {
+      var inv = new InventoryState {
+        s0 = new WeaponSlot(WeaponType.BasePistol, -1),
+        s1 = WeaponSlot.Empty,
+        s2 = WeaponSlot.Empty,
+        s3 = WeaponSlot.Empty,
+        ActiveIndex = 0
+      };
+      return inv;
+    }
+  }
+
+  public struct PickupData {
+    public WeaponType type;
+    public int ammo;
+    public PickupData(WeaponType t, int a){ type=t; ammo=a; }
+  }
+
+  public struct ConsumeResult {
+    public bool fired;
+    public InventoryState next;
+  }
+
+  public interface ISimApi {
+    // Port exposed to outer layers (Net/Presentation) — implemented by App (wrapping ServerSim).
+    int RegisterPlayer(Vector2 spawn);
+    InventoryState GetInventory(int actorId);
+    InventoryState SetActiveSlot(int actorId, int index);
+    InventoryState ApplyPickup(int actorId, PickupData loot, out bool dropped, out PickupData droppedPickup);
+    ConsumeResult TryConsumeAmmo(int actorId); // consumes 1 shot from active slot if not infinite
+  }
+}
+InventoryLogic.cs
+namespace Hellscape.Domain {
+  public static class InventoryLogic {
+    public static InventoryState ApplyPickup(in InventoryState inv, in PickupData loot,
+      out bool dropped, out PickupData droppedPickup)
+    {
+      dropped = false; droppedPickup = default;
+      if (loot.type == WeaponType.None || loot.ammo <= 0) return inv;
+
+      // Merge if same-type exists in slots 1..3
+      for (int i=1;i<=3;i++){
+        var s = inv.Get(i);
+        if (s.type == loot.type){
+          if (!s.IsInfinite) s.ammo += loot.ammo;
+          var outInv = inv; outInv.Set(i, s);
+          return outInv;
+        }
+      }
+      // Place in free slot
+      for (int i=1;i<=3;i++){
+        if (inv.Get(i).IsEmpty){
+          var outInv = inv; outInv.Set(i, new WeaponSlot(loot.type, loot.ammo));
+          return outInv;
+        }
+      }
+      // Full: replace target (active unless base; if base active, use slot1)
+      int target = (inv.ActiveIndex == 0) ? 1 : inv.ActiveIndex;
+      var toDrop = inv.Get(target);
+      dropped = !toDrop.IsEmpty;
+      if (dropped) droppedPickup = new PickupData(toDrop.type, toDrop.IsInfinite ? loot.ammo : toDrop.ammo);
+      var outInv2 = inv; outInv2.Set(target, new WeaponSlot(loot.type, loot.ammo));
+      return outInv2;
+    }
+
+    public static InventoryState SetActive(InventoryState inv, int index){
+      if (index < 0) index = 0; if (index > 3) index = 3;
+      inv.ActiveIndex = index;
+      return inv;
+    }
+
+    public static ConsumeResult TryConsume(InventoryState inv){
+      var s = inv.Get(inv.ActiveIndex);
+      if (s.IsEmpty) return new ConsumeResult{ fired=false, next=inv };
+      if (s.IsInfinite) return new ConsumeResult{ fired=true, next=inv };
+      if (s.ammo <= 0) return new ConsumeResult{ fired=false, next=inv };
+      s.ammo -= 1;
+      inv.Set(inv.ActiveIndex, s);
+      return new ConsumeResult{ fired=true, next=inv };
+    }
+  }
+}
+
+
+Important: The ISimApi interface lives in Domain (port). It will be implemented in App (wrapping ServerSim and holding per-player inventories). Net will only depend on ISimApi, avoiding Net↔App cycles.
+2) Tests (EditMode)
+Assets/Hellscape/Tests/EditMode/InventoryLogicTests.cs (new)
+ Covers: NewWithBase, merge same type, free slot, full+active0 replaces slot1, full+active2 replaces 2, base never dropped, SetActive, TryConsume on finite/infinite/empty.
+Run with:
 - Windows: powershell -ExecutionPolicy Bypass -File docs\tools\unity-test.ps1
+Composition root (App)
+Create a tiny service locator and the ISimApi adapter.
+Files
+Assets/Hellscape/Scripts/App/Services/ServiceLocator.cs (new)
 
-# Feature package: “Horde Slice”
-Refactor to the new GDD: wave-based survival on a large arena, base gun + floor weapons, 2–16 players, per-player score, revive at base, scalable spawns.
 
-## Scope Overview (keep hex!)
-- **Domain (pure C#):** Combat model (ablative armor), Weapon specs, PlayerInventory (base gun + 4 slots), ScoreSystem (per-client kills), WaveDirector (time-based), Pickups (weapon+ammo), ReviveAtBase rules.
-- **Net/App:** ServerSim authoritative; replicate minimal state (scores, game over, wave index, revive countdown). Server spawns/despawns pickups & enemies, validates pickups & revives. NGO + Relay unchanged.
-- **Presentation:** Simple arena (walled rectangle), BaseArea trigger, PickupView, HUD (slots/ammo/scoreboard), Game Over overlay, basic muzzle/tracer VFX (already have bullet visuals—reuse).
+Assets/Hellscape/Scripts/App/Sim/SimApiAdapter.cs (new) // implements Domain.ISimApi, wraps ServerSim + per-player inventories
 
----
 
-## A) Domain (new/changes)
+Assets/Hellscape/Scripts/App/Installers/GameInstaller.cs (new) // registers ports at boot
 
-### 1) Combat constants (seconds)
-Create/ensure:
-`Assets/Hellscape/Scripts/Domain/Combat/CombatConstants.cs`
-```csharp
-namespace Hellscape.Domain.Combat {
-    public static class CombatConstants {
-        public const float PistolCooldownSeconds = 0.15f; // base gun (infinite ammo)
-        public const float RifleCooldownSeconds  = 0.4f;
-        public const float SmgCooldownSeconds    = 0.08f;
-        public const float ShotgunCooldownSeconds= 0.75f;
-        public const float ShotgunPellets        = 8f;
-        // damage baselines
-        public const float PistolDamage = 6f;
-        public const float RifleTrue    = 3f, RifleNormal = 5f; // AP-ish split
-        public const float SmgDamage    = 4f;
-        public const float ShotgunPelletDamage = 2f; // × pellets, close-range stacks
+
+Rules
+App references Domain + Net + Presentation.
+
+
+Net/Presentation reference Domain only (plus Unity/NGO). They Resolve<ISimApi>() at runtime. No assembly cycles.
+
+
+ServiceLocator.cs (simple generic Register/Resolve).
+SimApiAdapter.cs
+Holds ServerSim instance and a Dictionary<int, InventoryState>.
+
+
+Implements all ISimApi methods using InventoryLogic + calls into ServerSim as needed (for positions, actors, etc.).
+
+
+For now, ServerSim remains the authority for movement/combat; SimApiAdapter keeps inventory state authoritative and serializes it to Net for HUD.
+
+
+GameInstaller.cs
+On scene boot (before networking), create/keep a root GO:
+
+
+Construct ServerSim (seeded), start it.
+
+
+Construct SimApiAdapter wrapping that sim.
+
+
+ServiceLocator.Register<ISimApi>(simApiAdapter);
+
+
+This removes the previous NetSim.Bridge coupling. Delete that and replace with ISimApi.
+
+Net & Presentation
+Net models & replication
+Files
+Assets/Hellscape/Scripts/Net/NetInventoryModels.cs (new)
+
+
+Modify NetPlayer.cs (add inventory replication & RPCs)
+
+
+Assets/Hellscape/Scripts/Net/WeaponPickup.cs (new)
+
+
+Assets/Hellscape/Scripts/Presentation/WeaponPickupSpawner.cs (new)
+
+
+NetInventoryModels.cs
+using Hellscape.Domain;
+using Unity.Netcode;
+
+namespace Hellscape.Net {
+  public struct NetWeaponSlot : INetworkSerializable {
+    public byte type; public int ammo;
+    public void NetworkSerialize<T>(BufferSerializer<T> s) where T : IReaderWriter {
+      s.SerializeValue(ref type); s.SerializeValue(ref ammo);
     }
+    public static NetWeaponSlot From(WeaponSlot s) => new(){ type=(byte)s.type, ammo=s.ammo };
+  }
 }
-Remove any prior “Ticks” pistol cooldown and convert to seconds usage.
+WeaponPickup (NetworkBehaviour)
+Server-owned, layer “Pickup”.
 
-2\) Armor model (ablative per hit)
 
-namespace Hellscape.Domain.Combat {
+NetworkVariable<byte> weaponType, NetworkVariable<int> ammo.
 
-    public struct Armor {
 
-        public float BlockPerHit;
+InitServer(WeaponType t, int ammo).
 
-        public float Durability;
 
-        public Armor(float blockPerHit, float durability) { BlockPerHit \= blockPerHit; Durability \= durability; }
+Minimal sprite; add idle bob in Update() (client-side).
 
-        public float Apply(ref float trueDmg, ref float normalDmg){
 
-            float blocked \= normalDmg;
+WeaponPickupSpawner (server-only)
+Uses a BoxCollider2D area to spawn pickups over time (random types from Rifle/SMG/Shotgun with configured ammo).
 
-            if (blocked \> BlockPerHit) blocked \= BlockPerHit;
 
-            if (blocked \> Durability) blocked \= Durability;
+Server Spawn() after InitServer.
 
-            Durability \-= blocked;
 
-            normalDmg \-= blocked;
+NetPlayer changes
+Add NetworkList<NetWeaponSlot> netSlots (size 4) and a NetworkVariable<int> activeIndex. Server writes; others read.
 
-            return trueDmg \+ normalDmg; // return health damage
 
-        }
+On server spawn:
 
-    }
 
-    public struct DamagePayload { public float True, Normal; public DamagePayload(float t,float n){True=t;Normal=n;} }
+actorId = ISimApi.RegisterPlayer(spawn).
 
-}
 
-**Unit tests** (EditMode, Domain):
+var inv = ISimApi.GetInventory(actorId) (should be NewWithBase).
 
-* `ArmorBlocksUpToPerHitAndDurability` (covers examples in GDD).
 
-* `NoArmorTakesAllDamage`.
+Mirror to netSlots + activeIndex.
 
-### **3\) Weapons & inventory (base \+ 4 slots)**
 
-namespace Hellscape.Domain.Combat {
+Interact input (owner):
 
-    public enum WeaponId : byte { BaseGun, Pistol, Rifle, Smg, Shotgun, Crossbow, AssaultRifle /\* future \*/, GooThrower, NetGun, FlameThrower }
 
-    public struct WeaponSpec {
+[ServerRpc] RequestPickupNearestServerRpc() → server does Physics2D.OverlapCircleNonAlloc on Pickup layer, picks nearest, builds PickupData, calls ISimApi.ApplyPickup(actorId, loot, out dropped, out droppedLoot). If dropped==true, spawn a new WeaponPickup at player pos with droppedLoot. Despawn consumed pickup. Mirror inventory to netSlots + activeIndex.
 
-        public WeaponId id; public float cooldown; public DamagePayload damage; public bool cone; public int pellets; public bool armorPiercing;
 
-        public WeaponSpec(WeaponId id, float cd, DamagePayload dmg, bool cone=false, int pellets=1, bool ap=false){
+Slot select inputs (owner):
 
-            this.id=id; cooldown=cd; damage=dmg; this.cone=cone; this.pellets=pellets; armorPiercing=ap;
 
-        }
+[ServerRpc] SetActiveSlotServerRpc(int index) → ISimApi.SetActiveSlot(actorId, index), mirror to network list/activeIndex. The HUD highlights accordingly.
 
-    }
 
-    public static class WeaponDB {
+Fire input (owner):
 
-        public static WeaponSpec BaseGun \=\> new(WeaponId.BaseGun, CombatConstants.PistolCooldownSeconds, new DamagePayload(0, CombatConstants.PistolDamage));
 
-        public static WeaponSpec Pistol  \=\> new(WeaponId.Pistol, 0.20f, new DamagePayload(0,6));
+Compute muzzle world position from the child transform Muzzle under the active weapon view; also compute aim direction from current control scheme (mouse/touch sends world position already).
 
-        public static WeaponSpec Rifle   \=\> new(WeaponId.Rifle, CombatConstants.RifleCooldownSeconds, new DamagePayload(CombatConstants.RifleTrue, CombatConstants.RifleNormal), ap:true);
 
-        public static WeaponSpec Smg     \=\> new(WeaponId.Smg, CombatConstants.SmgCooldownSeconds, new DamagePayload(0, CombatConstants.SmgDamage));
+[ServerRpc] FireServerRpc(Vector2 muzzleWorld, Vector2 dir):
 
-        public static WeaponSpec Shotgun \=\> new(WeaponId.Shotgun, CombatConstants.ShotgunCooldownSeconds, new DamagePayload(0, CombatConstants.ShotgunPelletDamage), cone:true, pellets:(int)CombatConstants.ShotgunPellets);
 
-    }
+First call ISimApi.TryConsumeAmmo(actorId). If fired == false → early out (no ammo).
 
-    public sealed class PlayerInventory {
 
-        // slot0 \= BaseGun infinite; slots 1..4 \= pickups with ammo
+Perform current server-side hit logic (raycast/overlap) using muzzleWorld + dir (no gameplay changes this round).
 
-        public readonly struct Slot { public readonly WeaponId id; public readonly int ammo; public Slot(WeaponId id,int ammo){this.id=id;this.ammo=ammo;} public Slot WithAmmo(int a)=\>new(id,a); }
 
-        private Slot slot0, slot1, slot2, slot3, slot4; private byte active \= 0;
+Trigger VFX: see below.
 
-        public PlayerInventory(){ slot0 \= new Slot(WeaponId.BaseGun, int.MaxValue); }
 
-        public byte ActiveSlot \=\> active;
+Shot VFX (Presentation)
+Add ShotVfxPlayer (MonoBehaviour), referenced by NetPlayer or a global registry:
+PlayMuzzleFlash(Vector2 pos, float angle) (uses a pooled sprite/particle).
 
-        public Slot Get(byte s)=\> s switch {0=\>slot0,1=\>slot1,2=\>slot2,3=\>slot3,4=\>slot4,\_=\>slot0};
 
-        public void SetActive(byte s){ if (s\<=4) active=s; }
+PlayTracer(Vector2 from, Vector2 to)
 
-        public bool TryPickup(WeaponId id, int ammo){
 
-            // stack if same weapon exists or place in first empty among 1..4
+PlayImpact(Vector2 pos, float angle) (spark).
 
-            ref Slot s1 \= ref slot1; ref Slot s2=ref slot2; ref Slot s3=ref slot3; ref Slot s4=ref slot4;
 
-            if (s1.id==id && s1.ammo\<int.MaxValue){ s1 \= s1.WithAmmo(s1.ammo+ammo); return true; }
+On FireServerRpc, after resolving hit, broadcast a ClientRpc carrying the minimal VFX payload (from, to, impact?) so all clients (including the owner) play the same visuals. (Keep payload small; this isn’t authoritative state.)
+Note: This is VFX only; we are not adding knockback or new gameplay effects yet.
 
-            if (s2.id==id && s2.ammo\<int.MaxValue){ s2 \= s2.WithAmmo(s2.ammo+ammo); return true; }
+UI (UI Toolkit)
+HUD reads NetPlayer.netSlots & activeIndex for the local player and updates:
 
-            if (s3.id==id && s3.ammo\<int.MaxValue){ s3 \= s3.WithAmmo(s3.ammo+ammo); return true; }
 
-            if (s4.id==id && s4.ammo\<int.MaxValue){ s4 \= s4.WithAmmo(s4.ammo+ammo); return true; }
+Slot names: Base, Rifle, SMG, Shotgun (or None).
 
-            if (s1.id==0){ s1 \= new Slot(id, ammo); return true; }
 
-            if (s2.id==0){ s2 \= new Slot(id, ammo); return true; }
+Ammo: number or ∞ for -1.
 
-            if (s3.id==0){ s3 \= new Slot(id, ammo); return true; }
 
-            if (s4.id==0){ s4 \= new Slot(id, ammo); return true; }
+Active highlight on current slot.
 
-            return false;
 
-        }
+Wire input actions for slot selection (slot0…slot3) and Interact.
 
-        public bool ConsumeAmmoOfActiveOneShotIfNeeded(){
 
-            if (active==0) return true; // base gun unlimited
 
-            ref Slot s \= ref slot1; if (active==2) s=ref slot2; else if (active==3) s=ref slot3; else if (active==4) s=ref slot4;
+Input
+Ensure HellscapeControls.inputactions has:
 
-            if (s.ammo\<=0) return false; s \= s.WithAmmo(s.ammo-1); return true;
 
-        }
+Player/Interact (E / gamepad West).
 
-    }
 
-}
+Player/Slot0..Slot3 (keyboard 1..4 / d-pad).
 
-**Tests:**
 
-* `PickupStacksOrFillsNewSlot`.
+Player/Fire (mouse/touch/trigger).
 
-* `ActiveSlotConsumesAmmoExceptBaseGun`.
 
-### **4\) Pickups and waves**
+Player/Aim provides world position on mouse/touch (you already set this up).
 
-namespace Hellscape.Domain.Director {
 
-    public sealed class WaveDirector {
+NetPlayer:
+Owner-only reads these actions.
 
-        public int WaveIndex { get; private set; }
 
-        public float Elapsed { get; private set; }
+For Fire, calculates aim dir = normalize(worldAim - muzzleWorld).
 
-        public void Tick(float dt){ Elapsed \+= dt; WaveIndex \= 1 \+ (int)(Elapsed / 30f); } // simple: \+1 wave / 30s
 
-        public float SpawnInterval() \=\> UnityEngine.Mathf.Lerp(3.0f, 0.6f, UnityEngine.Mathf.Clamp01(Elapsed/360f));
 
-        public int EnemyCap() \=\> (int)UnityEngine.Mathf.Lerp(18, 80, UnityEngine.Mathf.Clamp01(Elapsed/480f));
+Removing cycles (enforce)
+Delete/stop using any NetSim.Bridge‐style concrete coupling.
 
-        // (optional) return weighted tables by WaveIndex for types; simple for now.
 
-    }
+Add the Domain port ISimApi (above).
 
-}
 
-Add minimal domain description for **Pickup** (DTO):
+App implements and registers it (ServiceLocator.Register<ISimApi>(...)).
 
-using Hellscape.Domain.Combat;
 
-namespace Hellscape.Domain.Loot {
+Net/Presentation only ever call ServiceLocator.Resolve<ISimApi>() and use that interface.
 
-    public struct PickupDTO { public int id; public WeaponId weapon; public int ammo; public float x,y; }
 
-}
+No adapter ever references App in asmdefs.
 
-### **5\) Score system \+ revive-at-base**
 
-In `ServerSim`:
 
-* Track `Dictionary<ulong,int> killCounts` (by attacker clientId).
+Files to create/modify (summary)
+Domain
+Weapons/WeaponType.cs (new)
 
-* Expose getters: `GetKills(ulong clientId)`, `EnumerateScores()`, `GetTeamScore() => sum`.
 
-* **ReviveAtBase rule:** if any player is dead and at least one *alive* player enters BaseArea, start a revive countdown (e.g., 10s). On complete → respawn all dead at base with baseline HP.
+Weapons/InventoryModels.cs (new)
 
-Add a `SetBaseArea(Rect rect)` API and a `NotifyPlayerEnteredBase(ulong clientId,bool inside)` (server toggles per-frame based on Presentation overlap checks).
 
-**Tests:**
+Weapons/InventoryLogic.cs (new)
 
-* `ArmorExamplesMatchDoc()`
 
-* `WaveDirectorRamps()`
+(If needed) small additions to ServerSim to expose actor registration, but do not add Unity types.
 
-* `InventoryAmmoConsumption()`
 
----
+App
+Services/ServiceLocator.cs (new)
 
-## **B) Net/App (authoritative glue)**
 
-### **1\) Player count**
+Sim/SimApiAdapter.cs (new) — implements ISimApi
 
-In `RelayBootstrap.cs`, expose `maxConnections` as **\[SerializeField\] int \= 15** to support 2–16 players (host \+ 15 clients). No hard limit logic elsewhere.
 
-### **2\) Network replication (SimGameServer.cs)**
+Installers/GameInstaller.cs (new) — registers ISimApi (and ensures ServerSim exists)
 
-Add server-write NVs:
 
-public readonly NetworkVariable\<int\>   netWaveIndex     \= new(writePerm: Server);
+Net
+NetInventoryModels.cs (new)
 
-public readonly NetworkVariable\<int\>   netTeamScore     \= new(writePerm: Server);
 
-public readonly NetworkVariable\<bool\>  netGameOver      \= new(writePerm: Server);
+NetPlayer.cs (modify: inventory replication; slot/Interact/Fire RPCs; muzzle usage)
 
-public readonly NetworkVariable\<float\> netReviveSeconds \= new(writePerm: Server);
 
-Add a `NetworkList<PlayerScore>` for per-player kills:
+WeaponPickup.cs (new)
 
-public struct PlayerScore : INetworkSerializable {
 
-    public ulong clientId; public int kills;
+Presentation
+WeaponPickupSpawner.cs (new)
 
-    public void NetworkSerialize\<T\>(BufferSerializer\<T\> s) where T: IReaderWriter { s.SerializeValue(ref clientId); s.SerializeValue(ref kills); }
 
-}
+Vfx/ShotVfxPlayer.cs (new)
 
-public NetworkList\<PlayerScore\> netScores;
 
-* On server start, instantiate `netScores = new(NetworkVariableReadPermission.Everyone);`
+HUD scripts (update to read netSlots/activeIndex)
 
-* Each tick after `sim.Tick()`:
 
-  * `netWaveIndex.Value = waveDirector.WaveIndex;`
+Tests
+Assets/Hellscape/Tests/EditMode/InventoryLogicTests.cs (new)
 
-  * `netTeamScore.Value = sim.GetTeamScore();`
 
-  * Update `netReviveSeconds.Value = sim.GetReviveSecondsRemaining();`
 
-  * Rebuild `netScores` from domain kills if changed (avoid per-frame churn—update when diff).
+Acceptance
+Host & clients see weapons spawn over time (server-controlled).
 
-### **3\) Pickups: spawning \+ claiming**
 
-Server spawns **PickupView** NetworkObjects at intervals (weighted by wave). On client overlap, owner calls `[ServerRpc] TryPickupServerRpc(pickupNetId)`; server validates distance & availability; if OK → `inventory.TryPickup()` and despawns the pickup NO.
+Walking to a pickup + Interact:
 
-### **4\) Revive at base**
 
-Add `BaseArea` MonoBehaviour (Presentation) that tells server who is inside via a lightweight `ClientRpc` or per-frame server overlap checks (server has authoritative transforms already; simplest: BaseArea registers itself and server checks players’ positions).  
- When condition met and dead players exist → start 10s revive timer; update `netReviveSeconds`; on finish → respawn dead at base.
+Same type merges ammo.
 
-### **5\) Game over**
 
-When `AlivePlayers == 0` → `netGameOver = true`, freeze spawns, show overlay; host can **Restart** (button / R key): reset sim, scores, wave director, clear enemies & pickups, respawn everyone at spawn points.
+Empty slot takes it.
 
----
 
-## **C) Presentation**
+Inventory full: if active is base (0), replace slot1 (drop old); else replace active (drop old). Base is never dropped.
 
-### **1\) Arena \+ base**
 
-* Create a large **WalledArena** (tilemap or simple sprites) with BoxCollider2D walls.
+Drops appear immediately on ground (server → replicated).
 
-* Add `BaseArea` (BoxCollider2D trigger) near one corner, visible decal (“BASE”). Provide a serialized Rect to server via `SimGameServer.RegisterBaseArea(rect)` at Start.
 
-### **2\) PickupView**
+Slot switching works from input and updates HUD highlight & ammo text.
 
-`Assets/Hellscape/Scripts/Presentation/PickupView.cs`:
 
-* `NetworkObject` \+ SpriteRenderer (weapon icon), small floating anim.
+Firing:
 
-* On local player overlap, show “E: Pick up \<weapon\> (+ammo)”.
 
-* Owner input “Use” sends `TryPickupServerRpc`.
+Ammo decrements on server (unless infinite).
 
-### **3\) HUD**
 
-* **Ammo/Slots row**: “1: BaseGun ∞ | 2: Pistol 24 | 3: Rifle 18 | 4: SMG 90 | 5: Shotgun 12”. Active slot highlighted. Keys 1–5 / wheel cycle. (Also expose actions for mobile.)
+VFX play from the muzzle position toward aim (all peers see the same).
 
-* **Scores**: top-left team score; TAB shows per-player table from `netScores`.
 
-* **Wave**: top-center “Wave N”.
+No gameplay changes beyond existing hit logic.
 
-* **Revive**: if `netReviveSeconds>0`, show “Revive in X.Xs (stay at Base)”.
 
-* **Game Over**: centered final score; host sees “Restart”.
+No assembly cycles: Domain contains ports/DTOs; App composes; Net/Presentation depend only on Domain+Unity.
 
----
 
-## **D) Input**
 
-Extend InputActions:
 
-* `NextWeapon` / `PrevWeapon`, `Slot1..Slot5`.
-
-* `Use` picks up when in range; also used for revive interaction if needed.
-
-* For mobile, ensure `AimPosition` supports touch position (already planned); `Fire` mapped to a touch button.
-
----
-
-## **E) Acceptance Checklist**
-
-* Up to 16 players can join (host \+ 15). Camera follows owner.
-
-* Enemies spawn continuously with **ramping interval and cap**. Wave index increments \~ every 30s.
-
-* Pickups appear on the ground over time; players can **pick up** into slots 1–4; ammo decreases on fire; base gun is unlimited.
-
-* Per-player **kills** tracked; team score \= sum; HUD displays both.
-
-* If all players die → **Game Over** overlay \+ final score; host can restart.
-
-* If any player(s) dead but an alive player stands in **BaseArea**, revive countdown shows; at 0s all dead respawn at base.
-
-* Armor model follows GDD examples (unit tests pass).
-
----
-
-## **F) Files to add/modify (guidance)**
-
-**Domain**
-
-* `Combat/CombatConstants.cs` (new or updated)
-
-* `Combat/Armor.cs` (new)
-
-* `Combat/Weapons.cs` (new: WeaponDB, PlayerInventory)
-
-* `Director/WaveDirector.cs` (new)
-
-* `Loot/PickupDTO.cs` (new)
-
-* `ServerSim.cs` (extend: inventory per player, kills, pickups, waves, revive-at-base)
-
-**Net/App**
-
-* `App/SimGameServer.cs` (NVs, NetworkList scores, spawn ramps, revive, restart, pickups)
-
-* `Net/` add pickup ServerRpc handlers if you centralize them
-
-**Presentation**
-
-* `Presentation/PickupView.cs` (new)
-
-* `Presentation/Hud.cs` (extend/replace HudScore to show slots, wave, score, revive, game over)
-
-* `Presentation/BaseArea.cs` (new, reports rect or registers with SimGameServer)
-
-**Tests (EditMode)**
-
-* `ArmorTests.cs`
-
-* `InventoryTests.cs`
-
-* `WaveDirectorTests.cs`
-
-## **Notes**
-
-* Keep gameplay rules in Domain; MonoBehaviours only visualize and forward inputs.
-
-* Bullets already attribute damage: ensure they carry OwnerClientId so kills map to the right client.
-
-* For shotgun, server fires N pellets with cone spread (deterministic rng seeded from tick \+ actor id).
