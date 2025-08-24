@@ -2,33 +2,36 @@
 
 **Version:** 0.1 (living doc) **Project:** Hellscape **Genre:** 2D top‑down co‑op survival‑run **Camera:** Orthographic (URP 2D), top‑down **Platforms:** PC, WebGL, iOS/Android (Unity 6, NGO \+ Relay) **Mode(s):** Single‑player (local host) & 2–16 player drop‑in co‑op
 
-Drop-in co-op run into a burning city. Each night, a corruption ring expands outward. Stronger loot and enemies lie deeper toward the center. Survive, scavenge, push the ring back by destroying the portal—before it swallows the last safe blocks.
+Drop-in co-op constant waves of enemies come at you and your friends. You can freely move around a huge map to kite enemies as you fight them. Over time, higher elite enemies appear, but so do weapons lying on the floor.  
+You must coordinate with your team to grab different weapons to better synergize with each other when fighting the infernal hordes.  
+The game continues until all players die, scoring points based on how many enemies they killed.
 
 ---
 
 ## 1\. Vision & Pillars
 
-The first version of the game will include Tiers 0, 1 and 2 of enemies and weapons, with their corresponding city circles (Rural Fringe, Exurbs and Suburban Band)
+The first version of the game will include Tiers 0, 1 and 2 of enemies and weapons
 
-**Elevator pitch:** Fight inward through a collapsing city. Each night, corruption expands outward; the best loot lies deeper toward the center. Scavenge, coordinate soft roles, and destroy the portal before the ring swallows the last safe blocks.
+**Elevator pitch:** constant waves of enemies come at you and your friends. You can freely move around a huge map to kite enemies as you fight them. Over time, higher elite enemies appear, but so do weapons lying on the floor.  
+You must coordinate with your team to grab different weapons to better synergize with each other when fighting the infernal hordes.  
+The game continues until all players die, scoring points based on how many enemies they killed.
 
-**Description:** Peer to peer multiplayer. One player hosts the game. You start on the outskirts of a postapocalyptic city. You are safe out here, because the further you are from the city's center, the weaker the monsters. But corruption has continued to spread, so you need to get back in there and try to destroy the portal from which the monsters are coming from.  
-In the beginning, you and your friends only have shovels. With some special cool RNG exceptions, weapons and armor are stronger the deeper you go into the city because it's where police precincts, military complexes and tech industries are. 
+**Description:** Peer to peer multiplayer. One player hosts the game. You start with the basic gun, which you keep forever and has unlimited ammo. Each player has 4 more weapon slots and they find weapons on the floor around the play area.
 
 Enemies have clear taxonomies. Normal enemies have one specialization, and stronger enemies start to combine them.  
-In the beginning, the outskirts only have tier 0 enemies, the basic one. This first day is the chance for players to gather their first weapons and armor, and if they dare maybe they go in a little deeper to try their luck.  
-They will also experience the first night in which they'll see how tier 1 monsters move out to the outskirts.  
-So they have a set amount of days before the next tier of monsters reach this area.
+In the beginning, you fight tier 0 enemies, the basic one. This first stage gives the chance for players to gather their first weapons and feel the game.
 
-Very simple move and shoot. Find weapons in buildings. 2D top down view, the camera sticks to the player.   
+Very simple move and shoot. Find weapons on the floor. 2D top down view, the camera sticks to the player.   
 No skeletal nor frame animations. “Animation” via sprite swap, color flash, scale squash/stretch, micro‑hops, particles, trails. Slower enemies Hop, faster enemies slide.   
 For example, super heavy enemies have big slow, heavy hops that can even be accompanied by camera shake. And faster enemies just move towards you.  
 Enemies have an idle sprite (when they haven't noticed you), an aggro sprite (when they notice you and start attacking) and some have a hurt sprite (when they get hit)  
-Melee attacks are just a slash visual effect
+Melee attacks from enemies are just a slash visual effect
 
 Peer to peer matchmaking. One player hosts the game.
 
 Weapons have taxonomies that make them especially effective against some enemies
+
+There are no melee weapons.
 
 Rifles are armor piercing, so they are more effective against armored enemies. But they fire slowly so they aren't good against swarms.
 
@@ -44,8 +47,8 @@ Enemies flinch when hit (they stop walking). Only the Unstoppable enemies don't.
 
 ## Win Condition
 
-The objective is to get to the city center and destroy a portal.  
-**For the Demo**, players win when they try to move beyond Tier 2, the suburban band. 
+The objective is to survive as long as you can. You score points for every enemy killed.  
+Every enemy type gives a set amount of points.
 
 ## Lose Condition
 
@@ -58,9 +61,9 @@ They can be revived if at least one player returns to their base.
 
 **Pillars**
 
-1. **Radial Pressure:** A growing danger ring from city center; safety shrinks every night.  
-2. **Risk‑Weighted Loot:** Better gear in inner rings (police, military, tech).  
-3. **Toy‑First Combat:** Satisfying, readable “toys” (shovel, CC goo, AP rounds) with simple counters.  
+1. **Increasing Pressure:** A growing danger as stronger enemies appear with every wave.  
+2. **Risk‑Weighted Looting:** Looted weapons have finite ammo. And since weapons counter enemies, players should consider letting other players grab specialized weapons to synergyze when fighting.  
+3. **Toy‑First Combat:** Satisfying, readable “toys” (pushback shots, CC goo, AP rounds) with simple counters.  
 4. **Drop‑in Co‑op:** Start/Join fast via Relay; short, intense runs.  
 5. **Readable Minimalism:** Stylized sprites, no skeletal anim; juice via flashes, squash, particles, and 2D lights.
 
@@ -70,37 +73,22 @@ Success looks like: immediate pick‑up‑and‑play, clear risk/reward decision
 
 ## 2\. Core Loop
 
-**Run → Scavenge → Fight (make noise) → Attract horde → Decide:** press deeper for better loot or peel out to survive the night.
+**Run → Grab Weapons → Fight → Score Points:** press deeper for better loot or peel out to survive the night.
 
-**Objective:** Reach downtown and destroy the **Portal Node** before corruption overtakes the outskirts.
+**Objective:** Survive as long as possible while killing enemies to score points.
 
 **Lose Conditions (tentative):**
 
-* Squad wipe with no revives available.  
-* Corruption reaches the safe perimeter (final outer ring) **and** portal remains active.
+* Squad wipe with no revives available.
 
 ---
 
-## 3\. World & Progression
+## 3\. Progression
 
-### 3.1 City as Concentric Rings
+### Director (Pacing)
 
-* **Grid:** Seeded procedural grid (Chebyshev rings): Rural Fringe → Exurbs → Suburban Band → Industrial Belt → Midtown → Civic Core → Portal Keep  
-* **Nights**: Each night increases CorruptionRadius. Newly corrupted rings start using the next tier’s enemy pool. Per-enemy stats do not scale with night.  
-* **Radius Index r:** Higher \= farther from center; There's better loot closer to the center.  
-* **Buildings:** Prefabbed blocks (residential, police, warehouse, lab). Simple interiors (line‑of‑sight via tile occlusion).
-
-### 3.2 Night System
-
-* **Day length:** \~5 minutes (configurable).  
-* **NightCount** increments each full cycle.  
-* **Corruption Radius** increases each night; corrupt cells spawn tougher enemies and hazards.  
-* Visual: dark ring with emissive veins; gameplay: spawn multipliers, higher tier chance.
-
-### 3.3 Director (Pacing)
-
-* Maintains **Intensity** (0..1) from: recent damage, low ammo/meds, time since last spike.  
-* Spawns **spikes** (mini‑hordes, specials) when intensity is low; cools down after peaks.
+* Design varied waves of enemies combining enemy types.  
+* Use synergetic enemy types to increase tension and difficulty and spawn simplistic waves to release it.
 
 ---
 
@@ -120,6 +108,8 @@ Success looks like: immediate pick‑up‑and‑play, clear risk/reward decision
 
 ### Tier 0
 
+No taxonomies
+
 #### Basic (Damned)
 
 | Color | Misty Rose |
@@ -133,6 +123,8 @@ Success looks like: immediate pick‑up‑and‑play, clear risk/reward decision
 | Heuristics | Basic enemy |
 
 ### 4.1 Tier 1
+
+The basic taxonomies.
 
 #### Fast
 
@@ -270,6 +262,8 @@ Success looks like: immediate pick‑up‑and‑play, clear risk/reward decision
 
 ### 4.2 Tier 2
 
+Every type combines 2 of the basic taxonomies
+
 #### Riot Runner
 
 | Color | Yellow and Grey |
@@ -344,15 +338,21 @@ Success looks like: immediate pick‑up‑and‑play, clear risk/reward decision
 
 **V1 (Demo) ENDS HERE**
 
-**Spawn rules:** Early rings avoid synergy pairs (e.g., Screamer+Swarm) unless telegraphs are generous.
+**Spawn rules:** Early waves avoid synergy pairs (e.g., Screamer+Swarm), but they become more common with progression.
 
-### Tier 4
+### 4.3 Tier 3
 
-### Tier 5 \- Elites
+Every type combines 3 of the basic taxonomies
 
-None of them have the screamer skill
+### 4.4 Tier 4
 
-### Tier 6 \- Bosses
+Every type combines 4 of the basic taxonomies
+
+### 4.5 Tier 5 \- Elites
+
+Every type combines 2 of the basic taxonomies
+
+### 4.6 Tier 6 \- Bosses
 
 6 taxonomies combined in each
 
@@ -401,74 +401,6 @@ Armor model (ablative, per-hit):
 \- Examples:  
   (0,6) vs Armor(4, D=10) → Blocked 4, HP-2, D=6  
   (3,3) vs Armor(2, D=10) → Blocked 2, HP-(3+1)=4, D=8
-
-### Melee Tier 0
-
-#### Shovel
-
-| Attack Rate | Low |
-| :---- | :---- |
-| Noise | None |
-| Range | Melee |
-| Damage Per Attack | Low |
-| Target | Single Target |
-| Ammo | None |
-| Special | None |
-| Heuristic |  |
-
-### Melee Tier 1
-
-#### Hammer
-
-#### 
-
-| Attack Rate | Low |
-| :---- | :---- |
-| Noise | None |
-| Range | Melee |
-| Damage Per Attack | Medium |
-| Target | Single Target |
-| Ammo | None |
-| Special | Armor Piercing |
-| Heuristic |  |
-
-#### Spear
-
-| Attack Rate | Medium |
-| :---- | :---- |
-| Noise | None |
-| Range | Melee |
-| Damage Per Attack | Medium |
-| Target | Single Target |
-| Ammo | None |
-| Special | Double melee range |
-| Heuristic |  |
-
-#### Axe
-
-#### 
-
-| Attack Rate | Low |
-| :---- | :---- |
-| Noise | None |
-| Range | Melee |
-| Damage Per Attack | High |
-| Target | Single Target |
-| Ammo | None |
-| Special | Armor Piercing |
-| Heuristic |  |
-
-#### Sword
-
-| Attack Rate | Fast |
-| :---- | :---- |
-| Noise | None |
-| Range | Melee |
-| Damage Per Attack | High |
-| Target | Single Target |
-| Ammo | None |
-| Special | None |
-| Heuristic |  |
 
 ### Ranged Tier 1
 
@@ -602,65 +534,6 @@ Armor model (ablative, per-hit):
 
 ---
 
-## Buildings
-
-For the Demo, all buildings will just be squares with loot and enemies inside.  
-When the player kills all the enemies, they can choose to mark the place as their base.  
-When a building is marked as a base, the previous base gets unmarked  
-Enemies and loot stop spawning in bases.  
-When a player comes back to their base, dead players respawn
-
-### T0 — Rural Fringe (Tier 0\)
-
-**Biome/Buildings:** farm lots, barns, trailers, tool sheds, lone gas stops  
-**Weapons:** shovel (starter), farm melee (machete, hatchet and hammer), **lucky** finds of hunting rifle, pistol, pump shotgun in farmhouses  
-**Armor/Utility:** Antiseptic Spray  
-**Notes:** “learn to move” zone; sparse ammo. Learn to fight with melee and try out your first weapons.
-
-### T1 — Exurbs (Tier 1\)
-
-**Biome/Buildings:** bait & tackle, pawn shops, **sheriff substation**, roadside motels  
-**Weapons:** pistols, pump shotguns, hunting rifles, submachine guns  
-**Armor/Utility:** bandages, sports pads/helmet (low BlockPerHit)  
-**Notes:** Start feeling the counters between enemies and weapons. 
-
-### T2 — Suburban Band (Tier 2\)
-
-**Biome/Buildings:** big-box sporting goods, strip malls, small police precinct, pharmacies, garages  
- **Weapons:** Assault Rifles, Goo Throwers, Net Guns, Flame Throwers  
- **Armor/Utility:** Police vests, med kits  
- **Notes:** Introduce CC specialized weapons and area control.
-
-**V1 (Demo) ENDS HERE. For the demo players win when they try to go to the suburbs.**
-
-### T3 — Industrial Belt (Tier 3\)
-
-**Biome/Buildings:** warehouses, railyards, **chemical plant**, power substation, security posts  
- **Weapons:** LMGs (rare), carbines, craftables: **pipe bombs**, thermite, ANFO (gated)  
- **Armor/Utility:** **respirators/gas masks**, welding masks, improvised **plate carriers** (BlockPerHit 2, mid durability)  
- **Notes:** explosives & hazard gear show up; first steady AP trickle
-
-### T4 — Midtown (Tier 4\)
-
-**Biome/Buildings:** mid-rise offices, clinics, **private security** hubs, tech startups  
- **Weapons:** DMRs, suppressed carbines, **taser/sonic pusher** (tech CC), breaching charges (rare)  
- **Armor/Utility:** trauma kits, **ballistic plates** (BlockPerHit 3, higher durability), keycards  
- **Notes:** mobility \+ utility spike; CC toys start appearing
-
-### T5 — Civic Core (Tier 5\)
-
-**Biome/Buildings:** **police HQ/SWAT**, courthouse, central hospital, **university labs**, metro control  
- **Weapons:** AP battle rifles, grenade launcher (less-lethal \+ HE), **goo/net guns** (lab CC), shaped charges  
- **Armor/Utility:** riot armor, full gas masks, NV/IR optics, anti-toxin kits  
- **Notes:** this is where counters crystallize (AP vs Armored, CC vs Fast/Jumper)
-
-### T6 — Portal Keep (Tier 6\)
-
-**Biome/Buildings:** barricaded plaza, **military checkpoint**, arcology vault, occult machinery  
- **Weapons:** exotic prototypes (**phase lance**, **sigil disruptor**, anti-portal charges), limited ammo caches  
- **Armor/Utility:** heavy plates (BlockPerHit 4–6, low durability), boss-only mods  
- **Notes:** dual wardens drop unique items; loot is endgame-defining but scarce
-
 ## 6\. Controls & Feel
 
 * **Move:** WASD/left stick.  
@@ -678,6 +551,8 @@ When a player comes back to their base, dead players respawn
 * **Fire/Alt:** LMB / Trigger.  
 * **Dash:** Shift / South button.  
 * **Use/Revive:** E / West Button
+
+**Feel cheats:** red vignette when player gets hurt, camera impulse on big hits, muzzle flashes, flashlight cone, screen vignette at high intensity.
 
 ---
 
@@ -707,34 +582,19 @@ When a player comes back to their base, dead players respawn
 * **NGO \+ Unity Transport \+ Relay**: host authoritative; clients send inputs; server replicates state.  
 * **Native:** DTLS/UDP; **WebGL:** WSS.  
 * **Join‑in‑progress:** Host sends seed \+ nearby cells \+ actors; client spawns at outskirts with brief grace.  
-* **Interest management (later):** per grid cell.
+* **Interest management:** per grid cell.
 
 ### 8.3 Spawning & Balance
 
-`weight(type) = baseByRing[type,r] × nightMultiplier[n] × directorScale`
+`weight(type) = baseByTier[type,r] × timeMultiplier[n] × directorScale`
 
-* Ring defines baseline; Night increases elites/spawn rate; Director modulates spikes.
-
-**Demo Version**  
-Enemies spawn randomly within their allowed city circles.
-
-### 8.4 Hazards & Noise/Light
-
-* Weapons emit **noise**; higher noise pulls aggro across cells.  
-* **Light** affects Screamer/Jumper ranges slightly; flashbangs reset.
-
-**DEMO VERSION**  
-There are no flashbangs
+* Enemy type defines baseline; playtime increases spawn rate; Director modulates synergetic types spikes.
 
 ---
 
 ## 9\. Onboarding & Accessibility
 
-* **Onboarding:** Diegetic tips (graffiti/signs), safe tutorial block with shovel \+ first Screamer encounter.  
-* **Accessibility:** Remappable controls, aim assist slider, color‑blind‑safe palette, subtitles/telegraphs, screen shake toggle.
-
-**Demo Version**  
-Player will appear with the shovel. Swinging is intuitive, they will see an enemy and learn to kill it. When they find a building they will see there's loot. Onboarding will just be natural play.
+Player will appear with the base gun. Shooting is intuitive, they will see an enemy and learn to kill it. When they find a gun on the floor they will see there's loot. Onboarding will just be natural play.
 
 We won't add accessibility for the demo
 
@@ -744,15 +604,15 @@ We won't add accessibility for the demo
 
 * Median **TTK per type**, 5th/95th percentiles.  
 * **Counter usage** (% of kills where intended counter used).  
-* **Time‑to‑first‑kill** per spike; **deaths heatmap**; run seeds and ring reached.
+* **Time‑to‑first‑kill** per spike; **deaths heatmap**; run seeds and time reached.
 
 ---
 
 ## 11\. Milestones
 
-* **v0.4.0 (SP slice):** Night/Ring, city grid, shovel melee, pistol ranged, 2 tier 1 enemies.  
-* **v0.8.0 (MP):** Relay host/join, two players moving, snapshot basics, WebGL build.  
-* **v0.12.0 (AI):** Director, 6 Tier 1 enemies, 3 Tier 2 enemies, perf caps.  
+* **v0.4.0 (SP slice):** Map, scoring, base gun, base enemy Reached  
+* **v0.8.0 (MP):** Relay host/join, two players moving, snapshot basics, WebGL build. Reached  
+* **v0.12.0 (AI):** Director, Tier 0 enemy, 6 Tier 1 enemies, 3 Tier 2 enemies, perf caps.  
 * **v1.0.0 (Demo):** UX polish, telemetry, public WebGL page.
 
 ---
@@ -768,7 +628,6 @@ We won't add accessibility for the demo
 
 ## 13\. Glossary
 
-* **Ring/Radius Index:** distance band from center (Chebyshev metric).  
 * **Director:** pacing system controlling spikes based on Intensity.  
 * **TTK:** Time To Kill (target bands per enemy type).  
 * **Snapshot:** serialized world state sent to clients.
