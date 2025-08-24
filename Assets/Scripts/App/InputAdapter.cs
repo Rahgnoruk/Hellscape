@@ -82,28 +82,17 @@ namespace Hellscape.App {
             }
         }
         
-        public void OnInteract(InputAction.CallbackContext context) {
-            // Not used for movement system
-        }
-        
-        public void OnCrouch(InputAction.CallbackContext context) {
-            // Not used for movement system
-        }
-        
-        public void OnJump(InputAction.CallbackContext context) {
-            // Not used for movement system
-        }
-        
-        public void OnPrevious(InputAction.CallbackContext context) {
-            // Not used for movement system
-        }
-        
-        public void OnNext(InputAction.CallbackContext context) {
-            // Not used for movement system
-        }
-        
+        public void OnInteract(InputAction.CallbackContext context) { }
+        public void OnCrouch(InputAction.CallbackContext ctx) { }
+        public void OnJump(InputAction.CallbackContext ctx) { }
+        public void OnPrevious(InputAction.CallbackContext ctx) { }
+        public void OnNext(InputAction.CallbackContext ctx) { }
         public void OnDash(InputAction.CallbackContext context) {
             dashPressedThisTick = context.performed;
         }
+        public void OnWeaponSlot0(InputAction.CallbackContext ctx) { }
+        public void OnWeaponSlot1(InputAction.CallbackContext ctx) { }
+        public void OnWeaponSlot2(InputAction.CallbackContext ctx) { }
+        public void OnWeaponSlot3(InputAction.CallbackContext ctx) { }
     }
 }

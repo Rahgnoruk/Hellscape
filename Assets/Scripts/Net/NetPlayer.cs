@@ -155,5 +155,9 @@ namespace Hellscape.Net
         public void OnPrevious(InputAction.CallbackContext ctx) { }
         public void OnNext(InputAction.CallbackContext ctx) { }
         public void OnDash(InputAction.CallbackContext ctx) { }
+        public void OnWeaponSlot0(InputAction.CallbackContext ctx) { }
+        public void OnWeaponSlot1(InputAction.CallbackContext ctx) { }
+        public void OnWeaponSlot2(InputAction.CallbackContext ctx) { }
+        public void OnWeaponSlot3(InputAction.CallbackContext ctx) { }
     }
 }
