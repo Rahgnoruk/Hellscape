@@ -326,7 +326,7 @@ namespace Hellscape.App
             return actorToNetEnemy.Count;
         }
         
-        void RestartRun()
+        public void RestartRun()
         {
             // Despawn enemies you've spawned (keep references in a list as you spawn them)
             DespawnAllEnemies();
@@ -369,7 +369,7 @@ namespace Hellscape.App
             }
             actorToNetEnemy.Clear();
         }
-        private void Exit()
+        public void Exit()
         {
             RestartRun();
             sim = null;
