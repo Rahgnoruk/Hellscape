@@ -22,6 +22,9 @@ namespace Hellscape.Net
         string joinCodeInput = string.Empty;
         bool servicesReady;
 
+        // Public read-only property for UI access
+        public string LastJoinCode => lastJoinCode;
+
 
         async void Awake()
         {
