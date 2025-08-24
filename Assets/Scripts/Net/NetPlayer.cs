@@ -10,11 +10,16 @@ namespace Hellscape.Net
     {
         [SerializeField] float rpcRate = 20f; // Hz
         [SerializeField] SpriteRenderer spriteRenderer; // assign in inspector
+        [SerializeField] Transform muzzleTransform; // assign in inspector - child of weapon view
 
         public readonly NetworkVariable<Vector2> netPos =
           new(writePerm: NetworkVariableWritePermission.Server);
         public readonly NetworkVariable<short> netHp = new(writePerm: NetworkVariableWritePermission.Server);
         public readonly NetworkVariable<bool> netAlive = new(writePerm: NetworkVariableWritePermission.Server);
+        
+        // Inventory replication
+        public readonly NetworkList<NetWeaponSlot> netSlots = new(writePerm: NetworkVariableWritePermission.Server);
+        public readonly NetworkVariable<int> activeIndex = new(writePerm: NetworkVariableWritePermission.Server);
 
         private HellscapeControls _controls;
         private Vector2 _moveInput;
@@ -23,6 +28,9 @@ namespace Hellscape.Net
         private float _rpcAccum;
         private bool _fireHeld;
         private bool _firePressedThisTick;
+        
+        // Inventory state
+        private int _actorId = -1;
 
         public override void OnNetworkSpawn()
         {
@@ -40,11 +48,16 @@ namespace Hellscape.Net
                     Debug.LogError("NetSim.Bridge is not set! Ensure SimGameServer is running.");
                     return;
                 }
-                NetSim.Bridge?.RegisterNetPlayerServer(this);
+                
+                // Register player with inventory
+                _actorId = NetSim.Bridge.RegisterPlayerWithInventory(transform.position);
+                
+                // Initialize inventory
+                var inventory = NetSim.Bridge.GetInventory(_actorId);
+                MirrorInventoryToNetwork(inventory);
+                
                 netPos.Value = transform.position;
             }
-
-            
         }
 
         public override void OnNetworkDespawn()
@@ -84,6 +97,16 @@ namespace Hellscape.Net
             return b;
         }
         
+        Vector2 GetMuzzleWorldPosition()
+        {
+            if (muzzleTransform != null)
+            {
+                return muzzleTransform.position;
+            }
+            // Fallback to player position + forward
+            return transform.position + (Vector3)ComputeAim();
+        }
+        
         void Update()
         {
             transform.position = netPos.Value;
@@ -115,6 +138,15 @@ namespace Hellscape.Net
                 var aim = ComputeAim();
                 var buttons = BuildButtons();
                 SubmitInputServerRpc(mv, aim, buttons);
+                
+                // Handle firing with muzzle-based system
+                if (_fireHeld || _firePressedThisTick)
+                {
+                    var muzzlePos = GetMuzzleWorldPosition();
+                    var aimDir = ComputeAim();
+                    FireServerRpc(muzzlePos, aimDir);
+                }
+                
                 _rpcAccum = 0f;
             }
             if (!IsOwner)
@@ -130,7 +162,109 @@ namespace Hellscape.Net
         [ServerRpc(RequireOwnership = true)]
         void SubmitInputServerRpc(Vector2 move, Vector2 aim, byte buttons)
         {
+            // TODO: Update to use ISimApi for input submission
+            // For now, keep using NetSim.Bridge for backward compatibility
             NetSim.Bridge?.SubmitInputFrom(OwnerClientId, move, aim, buttons);
+        }
+
+        [ServerRpc(RequireOwnership = true)]
+        void RequestPickupNearestServerRpc()
+        {
+            if (NetSim.Bridge == null || _actorId == -1) return;
+            
+            // Find nearest pickup using Physics2D
+            var colliders = new Collider2D[10];
+            var count = Physics2D.OverlapCircleNonAlloc(transform.position, 2f, colliders, LayerMask.GetMask("Pickup"));
+            
+            if (count > 0)
+            {
+                // Find nearest pickup
+                var nearest = colliders[0];
+                var nearestDist = Vector2.Distance(transform.position, nearest.transform.position);
+                
+                for (int i = 1; i < count; i++)
+                {
+                    var dist = Vector2.Distance(transform.position, colliders[i].transform.position);
+                    if (dist < nearestDist)
+                    {
+                        nearest = colliders[i];
+                        nearestDist = dist;
+                    }
+                }
+                
+                var pickup = nearest.GetComponent<WeaponPickup>();
+                if (pickup != null)
+                {
+                    var loot = new PickupData((WeaponType)pickup.weaponType.Value, pickup.ammo.Value);
+                    var newInventory = NetSim.Bridge.ApplyPickup(_actorId, loot, out bool dropped, out var droppedPickup);
+                    
+                    // Mirror inventory to network
+                    MirrorInventoryToNetwork(newInventory);
+                    
+                    // Handle dropped weapon
+                    if (dropped)
+                    {
+                        SpawnDroppedWeaponServerRpc((byte)droppedPickup.type, droppedPickup.ammo, transform.position);
+                    }
+                    
+                    // Despawn consumed pickup
+                    pickup.NetworkObject.Despawn();
+                }
+            }
+        }
+
+        [ServerRpc(RequireOwnership = true)]
+        void SetActiveSlotServerRpc(int index)
+        {
+            if (NetSim.Bridge == null || _actorId == -1) return;
+            
+            var newInventory = NetSim.Bridge.SetActiveSlot(_actorId, index);
+            MirrorInventoryToNetwork(newInventory);
+        }
+
+        [ServerRpc(RequireOwnership = true)]
+        void FireServerRpc(Vector2 muzzleWorld, Vector2 dir)
+        {
+            if (NetSim.Bridge == null || _actorId == -1) return;
+            
+            // Try to consume ammo
+            var consumeResult = NetSim.Bridge.TryConsumeAmmo(_actorId);
+            if (!consumeResult.fired) return;
+            
+            // Update inventory if ammo was consumed
+            MirrorInventoryToNetwork(consumeResult.next);
+            
+            // TODO: Perform hit logic using muzzleWorld + dir
+            // For now, just trigger VFX
+            PlayShotVfxClientRpc(muzzleWorld, muzzleWorld + dir * 10f);
+        }
+
+        [ServerRpc(RequireOwnership = false)]
+        void SpawnDroppedWeaponServerRpc(byte weaponType, int ammo, Vector2 position)
+        {
+            // TODO: Spawn dropped weapon pickup at position
+            // This would require a prefab reference and spawn logic
+        }
+
+        [ClientRpc]
+        void PlayShotVfxClientRpc(Vector2 from, Vector2 to)
+        {
+            // Broadcast VFX event through domain system
+            Domain.Vector2 domainFrom = new Domain.Vector2(from.x, from.y);
+            Domain.Vector2 domainTo = new Domain.Vector2(to.x, to.y);
+            VfxEventSystem.Broadcast(VfxEvent.Shot(domainFrom, domainTo));
+        }
+
+        private void MirrorInventoryToNetwork(InventoryState inventory)
+        {
+            // Clear and repopulate network list
+            netSlots.Clear();
+            netSlots.Add(NetWeaponSlot.From(inventory.s0));
+            netSlots.Add(NetWeaponSlot.From(inventory.s1));
+            netSlots.Add(NetWeaponSlot.From(inventory.s2));
+            netSlots.Add(NetWeaponSlot.From(inventory.s3));
+            
+            activeIndex.Value = inventory.ActiveIndex;
         }
 
         // Input callbacks (owner)
@@ -149,15 +283,45 @@ namespace Hellscape.Net
                 _fireHeld = false;
             }
         }
-        public void OnInteract(InputAction.CallbackContext ctx) { }
+        public void OnInteract(InputAction.CallbackContext ctx) 
+        { 
+            if (ctx.performed && IsOwner)
+            {
+                RequestPickupNearestServerRpc();
+            }
+        }
         public void OnCrouch(InputAction.CallbackContext ctx) { }
         public void OnJump(InputAction.CallbackContext ctx) { }
         public void OnPrevious(InputAction.CallbackContext ctx) { }
         public void OnNext(InputAction.CallbackContext ctx) { }
         public void OnDash(InputAction.CallbackContext ctx) { }
-        public void OnWeaponSlot0(InputAction.CallbackContext ctx) { }
-        public void OnWeaponSlot1(InputAction.CallbackContext ctx) { }
-        public void OnWeaponSlot2(InputAction.CallbackContext ctx) { }
-        public void OnWeaponSlot3(InputAction.CallbackContext ctx) { }
+        public void OnWeaponSlot0(InputAction.CallbackContext ctx) 
+        { 
+            if (ctx.performed && IsOwner)
+            {
+                SetActiveSlotServerRpc(0);
+            }
+        }
+        public void OnWeaponSlot1(InputAction.CallbackContext ctx) 
+        { 
+            if (ctx.performed && IsOwner)
+            {
+                SetActiveSlotServerRpc(1);
+            }
+        }
+        public void OnWeaponSlot2(InputAction.CallbackContext ctx) 
+        { 
+            if (ctx.performed && IsOwner)
+            {
+                SetActiveSlotServerRpc(2);
+            }
+        }
+        public void OnWeaponSlot3(InputAction.CallbackContext ctx) 
+        { 
+            if (ctx.performed && IsOwner)
+            {
+                SetActiveSlotServerRpc(3);
+            }
+        }
     }
 }

@@ -20,6 +20,7 @@ namespace Hellscape.App
         private readonly Dictionary<ulong, int> clientToActor = new();     // NGO client → Domain actor
         private readonly Dictionary<int, NetPlayer> actorToNetPlayer = new(); // Domain actor → Net view
         private readonly Dictionary<int, NetEnemy> actorToNetEnemy = new(); // Domain actor → Net enemy view
+        private readonly Dictionary<int, InventoryState> _playerInventories = new(); // Domain actor → Inventory
         private float spawnTimer;
         
         // NetworkVariables for scoring and game state
@@ -140,12 +141,80 @@ namespace Hellscape.App
             }
             actorToNetPlayer[actorId] = netPlayer;
         }
+
+        // Inventory methods for INetSimBridge
+        public int RegisterPlayerWithInventory(Vector2 spawn)
+        {
+            // Convert Unity Vector2 to Domain Vector2
+            var domainPos = new DVec2(spawn.x, spawn.y);
+            
+            // Register with the sim and get actor ID
+            var actorId = sim.SpawnPlayerAt(domainPos);
+            
+            // Initialize inventory for this player
+            _playerInventories[actorId] = InventoryState.NewWithBase();
+            
+            return actorId;
+        }
+
+        public InventoryState GetInventory(int actorId)
+        {
+            if (_playerInventories.TryGetValue(actorId, out var inventory))
+            {
+                return inventory;
+            }
+            
+            // Return default inventory if not found
+            return InventoryState.NewWithBase();
+        }
+
+        public InventoryState SetActiveSlot(int actorId, int index)
+        {
+            if (_playerInventories.TryGetValue(actorId, out var inventory))
+            {
+                var newInventory = InventoryLogic.SetActive(inventory, index);
+                _playerInventories[actorId] = newInventory;
+                return newInventory;
+            }
+            
+            return InventoryState.NewWithBase();
+        }
+
+        public InventoryState ApplyPickup(int actorId, PickupData loot, out bool dropped, out PickupData droppedPickup)
+        {
+            if (_playerInventories.TryGetValue(actorId, out var inventory))
+            {
+                var newInventory = InventoryLogic.ApplyPickup(inventory, loot, out dropped, out droppedPickup);
+                _playerInventories[actorId] = newInventory;
+                return newInventory;
+            }
+            
+            dropped = false;
+            droppedPickup = default;
+            return InventoryState.NewWithBase();
+        }
+
+        public ConsumeResult TryConsumeAmmo(int actorId)
+        {
+            if (_playerInventories.TryGetValue(actorId, out var inventory))
+            {
+                var result = InventoryLogic.TryConsume(inventory);
+                if (result.fired)
+                {
+                    _playerInventories[actorId] = result.next;
+                }
+                return result;
+            }
+            
+            return new ConsumeResult { fired = false, next = InventoryState.NewWithBase() };
+        }
         void OnClientDisconnected(ulong clientId)
         {
             if (clientToActor.TryGetValue(clientId, out var actorId))
             {
                 clientToActor.Remove(clientId);
                 actorToNetPlayer.Remove(actorId);
+                _playerInventories.Remove(actorId);
                 sim.RemovePlayerActor(actorId);
             }
         }
