@@ -8,7 +8,7 @@
                 <engine:TextField name="JoinCode" placeholder="JOIN CODE" class="text-field" style="flex-grow: 1; margin-right: 10px; height: 50px; font-size: 16px;" />
                 <engine:Button name="BtnJoin" text="Join" class="button" style="width: 80px; height: 50px; font-size: 16px;" />
             </engine:VisualElement>
-            <engine:Label name="StatusText" class="status-text" style="text-align: center; color: rgb(204, 204, 204); font-size: 14px; min-height: 20px;" />
+            <engine:Label name="StatusText" text="Placeholder Text" class="status-text" style="text-align: center; color: rgb(204, 204, 204); font-size: 14px; min-height: 20px;" />
             <engine:Label text="Build: 0.1.0" class="footer-text" style="text-align: center; color: rgb(102, 102, 102); font-size: 12px; margin-top: 40px;" />
         </engine:VisualElement>
     </engine:VisualElement>
