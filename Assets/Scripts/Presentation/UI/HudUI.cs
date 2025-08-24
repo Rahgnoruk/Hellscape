@@ -151,12 +151,7 @@ namespace Hellscape.Presentation.UI
         
         private void OnMenuClicked()
         {
-            // Toggle pause menu (handled by UIBootstrap)
-            var pauseMenu = FindObjectOfType<PauseMenuUI>();
-            if (pauseMenu != null)
-            {
-                pauseMenu.Show(true);
-            }
+            
         }
     }
 }
