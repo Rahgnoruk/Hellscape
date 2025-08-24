@@ -126,31 +126,5 @@ namespace Hellscape.Net
                 Debug.LogException(ex);
             }
         }
-
-        // Minimal debug UI (replace with proper UI later)
-        void OnGUI()
-        {
-            const int pad = 10; int y = pad; int w = 320; int h = 30;
-            if (!Application.isPlaying) { return; }
-            if (NetworkManager.Singleton && !NetworkManager.Singleton.IsServer && !NetworkManager.Singleton.IsClient)
-            {
-                NetworkManager.Singleton.NetworkConfig.TickRate = 50;
-                if (GUI.Button(new Rect(pad, y, w, h), "Host via Relay"))
-                {
-                    _ = StartHostAsync();
-                }
-                y += h + pad;
-                GUILayout.BeginArea(new Rect(pad, y, w, 80));
-                GUILayout.Label("Join Code:");
-                joinCodeInput = GUILayout.TextField(joinCodeInput, 16).ToUpperInvariant();
-                if (GUILayout.Button("Join via Relay")) _ = StartClientAsync(joinCodeInput.Trim());
-                GUILayout.EndArea();
-            }
-            else
-            {
-                string status = NetworkManager.Singleton.IsServer ? "HOST" : (NetworkManager.Singleton.IsClient ? "CLIENT" : "IDLE");
-                GUI.Label(new Rect(pad, y, 500, h), $"Status: {status} Code: {lastJoinCode}");
-            }
-        }
     }
 }
