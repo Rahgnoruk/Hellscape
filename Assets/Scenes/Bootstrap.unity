@@ -662,6 +662,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8ad5609e5b00c944d97aac21f0991c80, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Hellscape.Presentation::Hellscape.Presentation.UI.HudUI
+  relayBootstrap: {fileID: 1548386465}
 --- !u!114 &929816135
 MonoBehaviour:
   m_ObjectHideFlags: 0

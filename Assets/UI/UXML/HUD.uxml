@@ -6,6 +6,7 @@
                 <engine:Label name="TeamScoreText" text="Team: 000000" class="score-text" style="font-size: 18px; color: white; margin-bottom: 5px;" />
                 <engine:Label name="PersonalScoreText" text="You: 0000" class="score-text" style="font-size: 16px; color: rgb(204, 204, 204);" />
             </engine:VisualElement>
+            <engine:Label name="JoinCodeText" text="Join Code: AKJSND" class="score-text" style="font-size: 18px; color: white; margin-bottom: 5px;" />
             <engine:Button name="BtnMenu" text="Menu" class="button" style="width: 80px; height: 40px; font-size: 16px;" />
         </engine:VisualElement>
         <engine:VisualElement style="position: absolute; bottom: 20px; left: 20px; pointer-events: auto;">

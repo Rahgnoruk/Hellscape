@@ -1,16 +1,21 @@
+using Hellscape.App;
+using Hellscape.Net;
+using Unity.Netcode;
 using UnityEngine;
 using UnityEngine.UIElements;
-using Unity.Netcode;
-using Hellscape.App;
 
 namespace Hellscape.Presentation.UI
 {
     [RequireComponent(typeof(UIDocument))]
     public class HudUI : MonoBehaviour
     {
+
+        [SerializeField] private RelayBootstrap relayBootstrap;
+        
         private UIDocument document;
         private Label teamScoreText;
         private Label personalScoreText;
+        private Label joinCodeText;
         private Label healthText;
         private VisualElement healthBarFill;
         private Button btnMenu;
@@ -42,6 +47,8 @@ namespace Hellscape.Presentation.UI
             
             teamScoreText = root.Q<Label>("TeamScoreText");
             personalScoreText = root.Q<Label>("PersonalScoreText");
+            joinCodeText = root.Q<Label>("JoinCodeText");
+            joinCodeText.text = $"Join Code: {relayBootstrap.LastJoinCode}";
             healthText = root.Q<Label>("HealthText");
             healthBarFill = root.Q<VisualElement>("HealthBarFill");
             btnMenu = root.Q<Button>("BtnMenu");
