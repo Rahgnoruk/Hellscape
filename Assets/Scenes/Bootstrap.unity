@@ -187,6 +187,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5e50c57531cf16249b7d935710cabdec, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Hellscape.Presentation::Hellscape.Presentation.UI.PauseMenuUI
+  uiBootstrap: {fileID: 266568475}
 --- !u!1 &266568473
 GameObject:
   m_ObjectHideFlags: 0
@@ -197,7 +198,6 @@ GameObject:
   m_Component:
   - component: {fileID: 266568474}
   - component: {fileID: 266568475}
-  - component: {fileID: 266568476}
   m_Layer: 0
   m_Name: UIRoot
   m_TagString: Untagged
@@ -236,6 +236,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b9638ae1d4327484b899f39814047c4d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Hellscape.Presentation::Hellscape.Presentation.UI.UIBootstrap
+  gameServer: {fileID: 1979876508}
   mainMenuDoc: {fileID: 336786289}
   hudDoc: {fileID: 929816133}
   pauseDoc: {fileID: 45128129}
@@ -245,19 +246,6 @@ MonoBehaviour:
   vignetteFxUI: {fileID: 929816135}
   pauseMenuUI: {fileID: 45128130}
   defeatScreenUI: {fileID: 1958596884}
---- !u!114 &266568476
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 266568473}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 6d54531977ecb194c95e2d3aa7a5d72a, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Unity.InputSystem::UnityEngine.InputSystem.OnScreen.OnScreenButton
-  m_ControlPath: 
 --- !u!1 &336786287
 GameObject:
   m_ObjectHideFlags: 0
@@ -663,6 +651,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Hellscape.Presentation::Hellscape.Presentation.UI.HudUI
   relayBootstrap: {fileID: 1548386465}
+  uiBootstrap: {fileID: 266568475}
 --- !u!114 &929816135
 MonoBehaviour:
   m_ObjectHideFlags: 0

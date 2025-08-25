@@ -1,10 +1,13 @@
 using UnityEngine;
 using Unity.Netcode;
 using UnityEngine.UIElements;
+using Hellscape.App;
 namespace Hellscape.Presentation.UI
 {
     public class UIBootstrap : MonoBehaviour
     {
+        [Header("GameServer")]
+        [SerializeField] private SimGameServer gameServer;
         [Header("UI Documents")]
         [SerializeField] private UIDocument mainMenuDoc;
         [SerializeField] private UIDocument hudDoc;
@@ -32,13 +35,14 @@ namespace Hellscape.Presentation.UI
             // Subscribe to network events
             if (NetworkManager.Singleton != null)
             {
+                SimGameServer.Instance.netGameOver.OnValueChanged += OnNetGameOverChanged;
                 NetworkManager.Singleton.OnClientConnectedCallback += OnNetworkConnected;
                 NetworkManager.Singleton.OnClientDisconnectCallback += OnNetworkDisconnected;
             }
         }
-        
         private void OnDestroy()
         {
+            SimGameServer.Instance.netGameOver.OnValueChanged -= OnNetGameOverChanged;
             if (NetworkManager.Singleton != null)
             {
                 NetworkManager.Singleton.OnClientConnectedCallback -= OnNetworkConnected;
@@ -72,7 +76,7 @@ namespace Hellscape.Presentation.UI
             if (defeatScreenUI != null) defeatScreenUI.gameObject.SetActive(false);
         }
         
-        private void ShowGameUI()
+        public void ShowGameUI()
         {
             if (hudDoc != null) hudDoc.gameObject.SetActive(true);
             if (mainMenuDoc != null) mainMenuDoc.gameObject.SetActive(false);
@@ -84,6 +88,17 @@ namespace Hellscape.Presentation.UI
             if (mainMenuUI != null) mainMenuUI.gameObject.SetActive(false);
             if (pauseMenuUI != null) pauseMenuUI.gameObject.SetActive(false);
             if (defeatScreenUI != null) defeatScreenUI.gameObject.SetActive(false);
+        }
+        private void OnNetGameOverChanged(bool oldValue, bool newValue)
+        {
+            if (newValue)
+            {
+                ShowDefeatScreen();
+            }
+            else
+            {
+                ShowGameUI();
+            }
         }
         private void ShowDefeatScreen()
         {
@@ -100,12 +115,18 @@ namespace Hellscape.Presentation.UI
         }
 
         // Public methods for external access
-        public void ShowPauseMenu(bool show)
+        public void ShowPauseMenu()
         {
-            if (pauseMenuUI != null)
-            {
-                pauseMenuUI.Show(show);
-            }
+            if (pauseDoc != null) pauseDoc.gameObject.SetActive(true);
+            if (defeatScreenDoc != null) defeatScreenDoc.gameObject.SetActive(false);
+            if (mainMenuDoc != null) mainMenuDoc.gameObject.SetActive(false);
+            if (hudDoc != null) hudDoc.gameObject.SetActive(false);
+
+            if (pauseMenuUI != null) pauseMenuUI.gameObject.SetActive(true);
+            if (defeatScreenUI != null) defeatScreenUI.gameObject.SetActive(false);
+            if (mainMenuUI != null) mainMenuUI.gameObject.SetActive(false);
+            if (hudUI != null) hudUI.gameObject.SetActive(false);
+            if (vignetteFxUI != null) vignetteFxUI.gameObject.SetActive(false);
         }
         
         public HudUI GetHudUI()

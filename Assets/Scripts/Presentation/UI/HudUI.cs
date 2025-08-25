@@ -11,11 +11,13 @@ namespace Hellscape.Presentation.UI
     {
 
         [SerializeField] private RelayBootstrap relayBootstrap;
-        
+        [SerializeField] private UIBootstrap uiBootstrap;
+
         private UIDocument document;
         private Label teamScoreText;
         private Label personalScoreText;
         private Label joinCodeText;
+        private Label teamReviveText;
         private Label healthText;
         private VisualElement healthBarFill;
         private Button btnMenu;
@@ -39,6 +41,7 @@ namespace Hellscape.Presentation.UI
         private void Update()
         {
             UpdateScores();
+            CheckDeadPlayers();
         }
         
         private void SetupUI()
@@ -49,6 +52,7 @@ namespace Hellscape.Presentation.UI
             personalScoreText = root.Q<Label>("PersonalScoreText");
             joinCodeText = root.Q<Label>("JoinCodeText");
             joinCodeText.text = $"Join Code: {relayBootstrap.LastJoinCode}";
+            teamReviveText = root.Q<Label>("TeamReviveText");
             healthText = root.Q<Label>("HealthText");
             healthBarFill = root.Q<VisualElement>("HealthBarFill");
             btnMenu = root.Q<Button>("BtnMenu");
@@ -69,7 +73,6 @@ namespace Hellscape.Presentation.UI
             SetSlot(2, "Empty", 0, false);
             SetSlot(3, "Empty", 0, false);
         }
-        
         private void UpdateScores()
         {
             if (SimGameServer.Instance != null && SimGameServer.Instance.IsSpawned)
@@ -93,7 +96,19 @@ namespace Hellscape.Presentation.UI
                 personalScoreText.text = "You: 0000";
             }
         }
-        
+        private void CheckDeadPlayers()
+        {
+            if (SimGameServer.Instance.netReviveSeconds.Value > 0)
+            {
+                teamReviveText.text = $"{SimGameServer.Instance.netDeadAwaiting.Value} Players " +
+                    $"Revive In: {SimGameServer.Instance.netReviveSeconds.Value}. Don't Die!";
+                teamReviveText.style.display = DisplayStyle.Flex;
+            }
+            else
+            {
+                teamReviveText.style.display = DisplayStyle.None;
+            }
+        }
         public void SetLocalHealth(int current, int max)
         {
             currentHealth = Mathf.Clamp(current, 0, max);
@@ -158,7 +173,7 @@ namespace Hellscape.Presentation.UI
         
         private void OnMenuClicked()
         {
-            
+            uiBootstrap.ShowPauseMenu();
         }
     }
 }
